@@ -102,6 +102,23 @@ Contas pagas têm prioridade na fila das máquinas ARM, e os recursos **Always F
 
 ## 1.4 Entrar na máquina
 
+### Do celular, sem instalar nada (recomendado)
+
+Use o **Cloud Shell** do próprio painel da Oracle (ícone `>_` no canto superior direito) — é um terminal Linux completo, e evita ter que instalar app de SSH no celular. Só falta levar a chave privada para lá:
+
+1. No Cloud Shell, abra o menu (⋮ ou o ícone de engrenagem) → **Upload** → escolha o arquivo `ssh-key-....key` que a Oracle baixou quando você criou a máquina.
+2. Depois, no terminal:
+
+```bash
+mv ~/ssh-key-*.key ~/.ssh/chave-lista.key
+chmod 600 ~/.ssh/chave-lista.key
+ssh -i ~/.ssh/chave-lista.key ubuntu@SEU_IP_PUBLICO
+```
+
+> Se, ao criar a máquina, você tiver **colado uma chave pública** em vez de gerar uma, use a privada correspondente — o mesmo procedimento de upload.
+
+### Do computador
+
 No seu computador, com o arquivo da chave privada:
 
 ```bash
