@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { evento, novoAparelho, subirServidor } from './ajuda.js';
 
-const { chamar } = await subirServidor();
+const { base, chamar } = await subirServidor();
 
 test('saude responde sem token', async () => {
   const { status, corpo } = await chamar('GET', '/saude');
@@ -213,4 +213,11 @@ test('entrada invalida vira erro 400, nao erro 500', async () => {
     corpo: { eventos: [{ ...evento('x'), deltaLista: 999999 }] },
   });
   assert.equal(deltaAbsurdo.status, 400);
+});
+
+test('a raiz responde uma pagina legivel, e nao erro de rota', async () => {
+  const resposta = await fetch(`${base}/`);
+  assert.equal(resposta.status, 200);
+  assert.match(resposta.headers.get('content-type') || '', /text\/html/);
+  assert.match(await resposta.text(), /Servidor no ar/);
 });

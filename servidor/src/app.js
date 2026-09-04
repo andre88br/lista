@@ -17,6 +17,36 @@ export function criarApp(pool) {
 
   app.get('/saude', (_req, res) => res.json({ ok: true, servico: 'lista', agora: new Date().toISOString() }));
 
+  // Quem abre o endereco no navegador merece uma resposta legivel, e nao o
+  // JSON de rota nao encontrada. Serve tambem para conferir o servidor a olho.
+  app.get('/', (_req, res) => {
+    res.type('html').send(`<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista &amp; Estoque</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.6 system-ui, sans-serif; margin: 0; display: grid; place-items: center;
+         min-height: 100vh; padding: 24px; background: #f6f7f6; color: #1a1c1a; }
+  @media (prefers-color-scheme: dark) { body { background: #101410; color: #e6e8e6; } }
+  main { max-width: 30rem; text-align: center; }
+  .ok { display: inline-block; padding: 6px 14px; border-radius: 999px;
+        background: #0F6B3F; color: #fff; font-weight: 600; font-size: 14px; }
+  h1 { font-size: 1.4rem; margin: 18px 0 8px; }
+  p { margin: 8px 0; opacity: .85; }
+  code { background: rgba(127,127,127,.18); padding: 2px 6px; border-radius: 4px; }
+</style>
+<main>
+  <span class="ok">Servidor no ar</span>
+  <h1>Lista &amp; Estoque</h1>
+  <p>Este endereço serve o aplicativo de lista de compras e estoque da casa. Não há nada para ver por aqui — quem conversa com ele é o app no celular.</p>
+  <p>Para compartilhar a lista, abra o app em <strong>Ajustes → Compartilhar com outra pessoa</strong> e use o código da casa.</p>
+  <p><code>/saude</code> responde o estado do serviço.</p>
+</main>
+</html>`);
+  });
+
   app.use('/v1/dispositivos', rotasDeDispositivos(pool));
 
   // Daqui para baixo, tudo exige o token do aparelho.
