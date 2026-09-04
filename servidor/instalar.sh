@@ -5,6 +5,7 @@ set -euo pipefail
 
 vermelho() { printf '\033[31m%s\033[0m\n' "$*"; }
 verde()    { printf '\033[32m%s\033[0m\n' "$*"; }
+amarelo()  { printf '\033[33m%s\033[0m\n' "$*"; }
 titulo()   { printf '\n\033[1m== %s ==\033[0m\n' "$*"; }
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,8 +13,12 @@ cd "$AQUI"
 
 if [ "$(id -u)" -eq 0 ]; then
   SUDO=""
-else
+elif command -v sudo >/dev/null 2>&1; then
   SUDO="sudo"
+else
+  vermelho "Este usuario nao e root e o comando sudo nao existe nesta maquina."
+  echo "Entre como root (sudo su -) ou instale o sudo, e rode o script de novo."
+  exit 1
 fi
 
 titulo "1/7 Conferindo o sistema"
