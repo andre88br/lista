@@ -65,11 +65,21 @@ if [ -f .env ]; then
   # shellcheck disable=SC1091
   . ./.env
 else
+  # Tudo pode vir por variavel de ambiente, para rodar sem terminal interativo:
+  #   DOMINIO=xxx.duckdns.org DUCKDNS_TOKEN=yyy ./instalar.sh
   DOMINIO="${DOMINIO:-}"
   while [ -z "$DOMINIO" ]; do
+    if [ ! -t 0 ]; then
+      vermelho "Sem terminal interativo e sem a variavel DOMINIO."
+      echo "Rode assim:  DOMINIO=seu-dominio.duckdns.org ./instalar.sh"
+      exit 1
+    fi
     read -rp "Endereco do servidor (ex.: andre-lista.duckdns.org): " DOMINIO
   done
-  read -rp "Token do DuckDNS (opcional, Enter para pular): " DUCKDNS_TOKEN
+
+  if [ -z "${DUCKDNS_TOKEN:-}" ] && [ -t 0 ]; then
+    read -rp "Token do DuckDNS (opcional, Enter para pular): " DUCKDNS_TOKEN
+  fi
   POSTGRES_PASSWORD="$(openssl rand -base64 32 | tr -d '/+=' | head -c 32)"
 
   cat > .env <<EOF

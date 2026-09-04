@@ -24,6 +24,15 @@ O instalador vai:
 
 No fim ele imprime o endereço para colocar no app, algo como `https://andre-lista.duckdns.org`.
 
+### Sem terminal interativo
+
+Dá para passar as respostas por variável de ambiente e rodar tudo de uma vez — inclusive de fora da máquina, o que evita problemas de colagem no terminal:
+
+```bash
+ssh -i ~/.ssh/sua-chave ubuntu@SEU_IP \
+  "cd ~/lista && git pull && cd servidor && DOMINIO=seu-dominio.duckdns.org DUCKDNS_TOKEN=seu-token ./instalar.sh"
+```
+
 > **A primeira execução demora** — Docker, imagens e certificado. Entre 5 e 10 minutos é normal.
 
 ### Se a sua máquina tem 1 GB (a AMD `E2.1.Micro`)
