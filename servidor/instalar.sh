@@ -34,14 +34,23 @@ fi
 
 titulo "2/7 Swap"
 # Em maquinas de 1 GB, sem swap o sistema mata processos durante o build.
-if [ "$POUCA_MEMORIA" -eq 1 ] && [ -z "$(swapon --show 2>/dev/null)" ]; then
-  echo "Criando 2 GB de swap..."
-  $SUDO fallocate -l 2G /swapfile || $SUDO dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+criar_swap() {
+  $SUDO fallocate -l 2G /swapfile 2>/dev/null || $SUDO dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
   $SUDO chmod 600 /swapfile
   $SUDO mkswap /swapfile >/dev/null
   $SUDO swapon /swapfile
-  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | $SUDO tee -a /etc/fstab >/dev/null
-  verde "Swap criado."
+  grep -q '^/swapfile' /etc/fstab 2>/dev/null || echo '/swapfile none swap sw 0 0' | $SUDO tee -a /etc/fstab >/dev/null
+}
+
+if [ "$POUCA_MEMORIA" -eq 1 ] && [ -z "$(swapon --show 2>/dev/null)" ]; then
+  echo "Criando 2 GB de swap..."
+  # Swap ajuda muito no build, mas nao vale abortar a instalacao se falhar.
+  if criar_swap; then
+    verde "Swap criado."
+  else
+    amarelo "Nao consegui criar swap. Sigo assim mesmo; se o build morrer por falta"
+    amarelo "de memoria, me avise para gerar a imagem fora da maquina."
+  fi
 elif [ "$POUCA_MEMORIA" -eq 1 ]; then
   verde "Swap ja existe."
 else
@@ -80,7 +89,9 @@ else
   if [ -z "${DUCKDNS_TOKEN:-}" ] && [ -t 0 ]; then
     read -rp "Token do DuckDNS (opcional, Enter para pular): " DUCKDNS_TOKEN
   fi
-  POSTGRES_PASSWORD="$(openssl rand -base64 32 | tr -d '/+=' | head -c 32)"
+  # Sem o "|| true": head fecha o pipe cedo, tr leva SIGPIPE e o pipefail derruba tudo.
+  POSTGRES_PASSWORD="$(openssl rand -base64 48 | tr -d '/+=' | cut -c1-32 || true)"
+  [ -n "$POSTGRES_PASSWORD" ] || POSTGRES_PASSWORD="$(date +%s%N | sha256sum | cut -c1-32)"
 
   cat > .env <<EOF
 DOMINIO=$DOMINIO
@@ -119,8 +130,26 @@ titulo "6/7 DuckDNS"
 if [ -n "${DUCKDNS_TOKEN:-}" ]; then
   SUB="${DOMINIO%%.duckdns.org}"
   LINHA="*/15 * * * * curl -fsS 'https://www.duckdns.org/update?domains=$SUB&token=$DUCKDNS_TOKEN&ip=' >/dev/null 2>&1"
-  ( crontab -l 2>/dev/null | grep -v 'duckdns.org/update'; echo "$LINHA" ) | crontab -
-  curl -fsS "https://www.duckdns.org/update?domains=$SUB&token=$DUCKDNS_TOKEN&ip=" >/dev/null && verde "IP atualizado no DuckDNS e agendado a cada 15 min."
+
+  # Numa maquina nova nao existe crontab ainda, e "crontab -l" sai com erro.
+  # Sem os "|| true", isso derrubaria o script inteiro por causa do set -e.
+  if command -v crontab >/dev/null 2>&1; then
+    CRON_ATUAL="$(crontab -l 2>/dev/null || true)"
+    CRON_LIMPO="$(printf '%s\n' "$CRON_ATUAL" | grep -v 'duckdns.org/update' || true)"
+    if printf '%s\n%s\n' "$CRON_LIMPO" "$LINHA" | grep -v '^$' | crontab - 2>/dev/null; then
+      echo "Atualizacao de IP agendada a cada 15 minutos."
+    else
+      amarelo "Nao consegui agendar no cron; o IP nao sera atualizado sozinho."
+    fi
+  else
+    amarelo "Sem cron nesta maquina; o IP nao sera atualizado sozinho."
+  fi
+
+  if curl -fsS "https://www.duckdns.org/update?domains=$SUB&token=$DUCKDNS_TOKEN&ip=" >/dev/null 2>&1; then
+    verde "IP atualizado no DuckDNS."
+  else
+    amarelo "Nao consegui falar com o DuckDNS agora. Confira o token e o dominio."
+  fi
 else
   echo "Sem token do DuckDNS; pulando a atualizacao automatica de IP."
 fi
