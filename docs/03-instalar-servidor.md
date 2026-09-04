@@ -48,7 +48,7 @@ Os problemas são quase sempre um destes três, nesta ordem:
 
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
-| `curl` trava sem resposta | Security List da Oracle bloqueando | Painel → Subnet → Security List → liberar TCP 80 e 443 (seção 1.4 do guia 1) |
+| `curl` trava sem resposta | Security List da Oracle bloqueando | Painel → Subnet → Security List → liberar TCP 80 e 443 (seção 1.5 do guia 1) |
 | `Connection refused` | contêiner fora do ar | `sudo docker compose ps` e `sudo docker compose logs -n 50` |
 | Erro de certificado | domínio não aponta para o IP | `ping seu-dominio.duckdns.org` tem que devolver o IP do VPS |
 

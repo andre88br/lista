@@ -17,7 +17,19 @@ Tempo: ~30 minutos, sendo boa parte esperando a verificação da conta.
 
 ---
 
-## 1.2 Criar a máquina
+## 1.2 Criar a rede primeiro
+
+**Faça esta etapa antes de criar a máquina.** Contas novas não vêm com nenhuma rede virtual, e na hora de criar a instância o campo **Subnet** só lista subnets que já existem — se você for direto para a máquina, esse campo aparece vazio e não há como prosseguir.
+
+1. Menu ☰ → **Networking** → **Virtual Cloud Networks**.
+2. Confira no canto superior direito que a **região** é a que você escolheu (São Paulo). Rede criada em outra região não aparece depois.
+3. Botão **Start VCN Wizard** → escolha **Create VCN with Internet Connectivity** → **Start VCN Wizard**.
+4. **VCN Name**: `rede-lista`. Deixe o resto como vem (`10.0.0.0/16`).
+5. **Next** → **Create**.
+
+Em cerca de 30 segundos ele cria a VCN, uma **subnet pública**, uma privada, o internet gateway e as rotas — tudo já configurado para a máquina ser acessível pela internet.
+
+## 1.3 Criar a máquina
 
 No painel (<https://cloud.oracle.com>):
 
@@ -28,7 +40,12 @@ No painel (<https://cloud.oracle.com>):
    - **Shape**: clique em *Change shape* → aba **Ampere** → **VM.Standard.A1.Flex**.
      - **OCPUs**: `2` · **Memory**: `12 GB`.
      - (O limite gratuito é 4 OCPUs e 24 GB no total. Usar 2 e 12 deixa folga para você criar outra máquina depois, e sobra muito para este app.)
-4. **Primary VNIC / Networking**: deixe como vem (ele cria uma rede nova). Só confirme que **Assign a public IPv4 address** está marcado como **Yes**.
+4. **Primary VNIC / Networking** (use a rede criada no passo anterior):
+   - **Virtual cloud network**: `rede-lista`
+   - **Subnet**: a que tem **`public`** no nome. Não escolha a `private` — nela a máquina não recebe IP público e você não consegue acessá-la.
+   - **Assign a public IPv4 address**: **Yes**
+
+   > **Campo Subnet vazio?** É porque não existe subnet naquela região/compartimento. Volte ao passo 1.2. Se você já criou a VCN, confira duas coisas: a **região** no canto superior direito precisa ser a mesma das duas telas, e o **compartment** no filtro à esquerda precisa ser aquele onde a VCN foi criada (o padrão é o `root`).
 5. **Add SSH keys**: escolha **Generate a key pair for me** e clique em **Save private key** — guarde esse arquivo (`ssh-key-....key`), é a única forma de entrar na máquina. Salve também a chave pública.
 6. **Create**.
 
@@ -45,7 +62,7 @@ Em 1–2 minutos a instância fica **RUNNING**. Anote o **Public IP address** qu
 
 ---
 
-## 1.3 Entrar na máquina
+## 1.4 Entrar na máquina
 
 No seu computador, com o arquivo da chave privada:
 
@@ -60,7 +77,7 @@ O usuário é **`ubuntu`** (não é `root`). Se aparecer "Permission denied", qu
 
 ---
 
-## 1.4 Abrir as portas 80 e 443 — as DUAS camadas
+## 1.5 Abrir as portas 80 e 443 — as DUAS camadas
 
 Este é o tropeço clássico da Oracle: **existem dois firewalls**, e liberar só um faz o site "não responder" sem nenhuma mensagem de erro.
 
@@ -91,7 +108,7 @@ Pronto — a máquina está criada e acessível.
 
 ---
 
-## 1.5 Me mande o diagnóstico
+## 1.6 Me mande o diagnóstico
 
 Antes de instalar qualquer coisa, rode este comando na máquina e me mande a saída inteira. Ele só lê informações, não muda nada:
 

@@ -70,7 +70,7 @@ if tem iptables; then
         if echo "$REGRAS" | grep -q -- "--dport $porta -j ACCEPT"; then
           echo "Porta $porta liberada no iptables: SIM"
         else
-          echo "Porta $porta liberada no iptables: NAO  <-- precisa liberar (veja docs/01-criar-vps-oracle.md, secao 1.4)"
+          echo "Porta $porta liberada no iptables: NAO  <-- precisa liberar (veja docs/01-criar-vps-oracle.md, secao 1.5)"
         fi
       done
     fi
