@@ -1,0 +1,18 @@
+{$DOMINIO} {
+	encode gzip
+
+	# O stream de avisos e uma conexao longa: nada de bufferizar nem cortar.
+	@stream path /v1/stream
+	reverse_proxy @stream api:8080 {
+		flush_interval -1
+	}
+
+	reverse_proxy api:8080
+
+	log {
+		output file /data/acesso.log {
+			roll_size 10MiB
+			roll_keep 3
+		}
+	}
+}

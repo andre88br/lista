@@ -9,3 +9,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Servidor
+servidor/node_modules/
+servidor/.env
+servidor/backups/

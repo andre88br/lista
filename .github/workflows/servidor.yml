@@ -1,0 +1,53 @@
+name: Servidor
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - 'servidor/**'
+      - '.github/workflows/servidor.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  testes:
+    name: Testes do servidor
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: senha_de_teste
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: servidor/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: servidor
+        run: npm ci
+
+      - name: Rodar os testes
+        working-directory: servidor
+        env:
+          DATABASE_URL: postgres://postgres:senha_de_teste@127.0.0.1:5432/postgres
+        run: npm test
+
+      - name: Conferir que a imagem Docker compila
+        working-directory: servidor
+        run: docker build -t lista-servidor:ci .

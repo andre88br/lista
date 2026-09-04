@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# Instala e sobe o servidor do app Lista & Estoque neste VPS.
+# Pode ser rodado de novo a qualquer momento: ele nao refaz o que ja esta feito.
+set -euo pipefail
+
+vermelho() { printf '\033[31m%s\033[0m\n' "$*"; }
+verde()    { printf '\033[32m%s\033[0m\n' "$*"; }
+titulo()   { printf '\n\033[1m== %s ==\033[0m\n' "$*"; }
+
+AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$AQUI"
+
+if [ "$(id -u)" -eq 0 ]; then
+  SUDO=""
+else
+  SUDO="sudo"
+fi
+
+titulo "1/6 Conferindo o sistema"
+echo "Arquitetura: $(uname -m)"
+MEM_MB=$(free -m | awk '/^Mem:/ {print $2}')
+echo "Memoria: ${MEM_MB} MB"
+if [ "$MEM_MB" -lt 900 ]; then
+  vermelho "Memoria muito baixa. O Postgres pode nao subir. Me avise para eu ajustar a configuracao."
+fi
+
+titulo "2/6 Docker"
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  verde "Docker ja instalado: $(docker --version)"
+else
+  echo "Instalando o Docker (pode levar alguns minutos)..."
+  curl -fsSL https://get.docker.com | $SUDO sh
+  $SUDO usermod -aG docker "$USER" || true
+  verde "Docker instalado. (Para usar sem sudo, saia e entre de novo no SSH.)"
+fi
+DOCKER="$SUDO docker"
+
+titulo "3/6 Configuracao"
+if [ -f .env ]; then
+  verde "Arquivo .env ja existe; mantendo o que esta la."
+  # shellcheck disable=SC1091
+  . ./.env
+else
+  DOMINIO="${DOMINIO:-}"
+  while [ -z "$DOMINIO" ]; do
+    read -rp "Endereco do servidor (ex.: andre-lista.duckdns.org): " DOMINIO
+  done
+  read -rp "Token do DuckDNS (opcional, Enter para pular): " DUCKDNS_TOKEN
+  POSTGRES_PASSWORD="$(openssl rand -base64 32 | tr -d '/+=' | head -c 32)"
+
+  cat > .env <<EOF
+DOMINIO=$DOMINIO
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-}
+EOF
+  chmod 600 .env
+  verde "Arquivo .env criado (senha do banco gerada automaticamente)."
+fi
+
+titulo "4/6 Portas 80 e 443"
+# A Oracle tem dois firewalls. Este script cuida do de dentro da maquina;
+# o do painel (Security List da VCN) so voce consegue liberar, pela web.
+if command -v iptables >/dev/null 2>&1; then
+  for porta in 80 443; do
+    if $SUDO iptables -C INPUT -p tcp --dport "$porta" -j ACCEPT 2>/dev/null; then
+      echo "Porta $porta ja liberada no iptables."
+    else
+      $SUDO iptables -I INPUT 6 -m state --state NEW -p tcp --dport "$porta" -j ACCEPT 2>/dev/null \
+        || $SUDO iptables -I INPUT -p tcp --dport "$porta" -j ACCEPT
+      echo "Porta $porta liberada no iptables."
+    fi
+  done
+  $SUDO netfilter-persistent save >/dev/null 2>&1 || $SUDO sh -c 'iptables-save > /etc/iptables/rules.v4' 2>/dev/null || true
+fi
+echo "Lembrete: no painel da Oracle, a Security List da sub-rede tambem precisa liberar 80 e 443."
+
+titulo "5/6 DuckDNS"
+# shellcheck disable=SC1091
+. ./.env
+if [ -n "${DUCKDNS_TOKEN:-}" ]; then
+  SUB="${DOMINIO%%.duckdns.org}"
+  LINHA="*/15 * * * * curl -fsS 'https://www.duckdns.org/update?domains=$SUB&token=$DUCKDNS_TOKEN&ip=' >/dev/null 2>&1"
+  ( crontab -l 2>/dev/null | grep -v 'duckdns.org/update'; echo "$LINHA" ) | crontab -
+  curl -fsS "https://www.duckdns.org/update?domains=$SUB&token=$DUCKDNS_TOKEN&ip=" >/dev/null && verde "IP atualizado no DuckDNS e agendado a cada 15 min."
+else
+  echo "Sem token do DuckDNS; pulando a atualizacao automatica de IP."
+fi
+
+titulo "6/6 Subindo os conteineres"
+$DOCKER compose up -d --build
+
+echo "Esperando o servidor responder..."
+OK=0
+for _ in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:8080/saude" >/dev/null 2>&1 || $DOCKER compose exec -T api node -e "fetch('http://127.0.0.1:8080/saude').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
+    OK=1; break
+  fi
+  sleep 2
+done
+
+if [ "$OK" -eq 1 ]; then
+  verde "Servidor no ar."
+else
+  vermelho "O servidor nao respondeu. Veja os logs com:  $SUDO docker compose logs -n 50"
+  exit 1
+fi
+
+titulo "Conferindo o HTTPS de fora"
+echo "O certificado leva alguns segundos na primeira vez."
+sleep 10
+if curl -fsS --max-time 20 "https://$DOMINIO/saude"; then
+  echo
+  verde "Tudo pronto! No app, use este endereco: https://$DOMINIO"
+else
+  echo
+  vermelho "Ainda nao respondeu pelo dominio. Verifique, nesta ordem:"
+  echo "  1. O DuckDNS aponta para o IP publico desta maquina?"
+  echo "  2. A Security List da VCN na Oracle libera 80 e 443?"
+  echo "  3. Logs do Caddy:  $SUDO docker compose logs caddy -n 50"
+fi
