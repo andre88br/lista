@@ -34,8 +34,9 @@ Por padrão o app é 100% local. Se você quiser dividir a casa com alguém, exi
 1. Crie a máquina: **[docs/01-criar-vps-oracle.md](docs/01-criar-vps-oracle.md)** (plano gratuito da Oracle).
 2. Pegue um endereço grátis: **[docs/02-duckdns.md](docs/02-duckdns.md)**.
 3. Instale o servidor: **[docs/03-instalar-servidor.md](docs/03-instalar-servidor.md)** — é um script só.
-4. No app: **Ajustes → Compartilhar com outra pessoa** → informe o endereço → **Criar casa**. Aparece um código tipo `4KJ2-9WPX`.
-5. A outra pessoa instala o app, informa o mesmo endereço e digita o código. Pronto.
+4. Coloque o endereço do seu servidor em `gradle.properties` (`lista.servidorPadrao=https://...`) e gere o APK. O endereço fica embutido: **ninguém precisa digitá-lo**.
+5. No app: **Ajustes → Compartilhar com outra pessoa → Criar casa**. Aparece um código tipo `4KJ2-9WPX`.
+6. A outra pessoa instala o mesmo APK, abre a mesma tela e digita o código. Pronto — para ela, servidor nem existe.
 
 A partir daí: ela marca o café como "acabou", aparece na sua lista; você compra no mercado, some da lista dela.
 

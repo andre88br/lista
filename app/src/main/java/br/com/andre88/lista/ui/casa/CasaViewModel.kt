@@ -34,16 +34,26 @@ class CasaViewModel(
 
     private val nomeDoAparelho: String = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
 
-    fun conectar(url: String) = executar("Conectado ao servidor") {
+    fun trocarServidor(url: String) = executar("Servidor alterado") {
         sync.configurarServidor(url, nomeDoAparelho)
     }
 
+    // O registro do aparelho acontece aqui dentro, sem passo separado: para quem
+    // usa o app, existe apenas "criar a casa" ou "entrar com o código".
     fun criarCasa(nome: String) = executar("Casa criada") {
-        sync.criarCasa(nome.ifBlank { "Minha casa" }).map { }
+        runCatching {
+            sync.garantirRegistro(nomeDoAparelho)
+            sync.criarCasa(nome.ifBlank { "Minha casa" }).getOrThrow()
+            Unit
+        }
     }
 
     fun entrar(codigo: String, juntarMeusItens: Boolean) = executar("Pronto, vocês estão na mesma casa") {
-        sync.entrarNaCasa(codigo, juntarMeusItens).map { }
+        runCatching {
+            sync.garantirRegistro(nomeDoAparelho)
+            sync.entrarNaCasa(codigo, juntarMeusItens).getOrThrow()
+            Unit
+        }
     }
 
     fun gerarNovoCodigo() = executar("Código novo gerado") { sync.gerarNovoCodigo().map { } }

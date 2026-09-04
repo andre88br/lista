@@ -1,6 +1,7 @@
 package br.com.andre88.lista.data
 
 import android.content.Context
+import br.com.andre88.lista.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +61,17 @@ class Preferencias(context: Context) {
     private val _sincronizacao = MutableStateFlow(lerEstadoSincronizacao())
     val sincronizacao: StateFlow<EstadoSincronizacao> = _sincronizacao.asStateFlow()
 
-    val servidorUrl: String? get() = prefs.getString(CHAVE_SERVIDOR, null)
+    /**
+     * Endereco do servidor. Ja vem embutido no APK: quem instala o app nao
+     * precisa saber que existe um servidor. Só aparece para quem quiser trocar.
+     */
+    val servidorUrl: String?
+        get() = prefs.getString(CHAVE_SERVIDOR, null)
+            ?: BuildConfig.SERVIDOR_PADRAO.takeIf { it.isNotBlank() }
+
+    /** Verdadeiro quando o endereco em uso e o que veio no APK. */
+    val servidorPadraoEmUso: Boolean
+        get() = prefs.getString(CHAVE_SERVIDOR, null) == null
     val dispositivoId: String? get() = prefs.getString(CHAVE_DISPOSITIVO, null)
     val token: String? get() = prefs.getString(CHAVE_TOKEN, null)
     val casaId: String? get() = prefs.getString(CHAVE_CASA_ID, null)
@@ -127,7 +138,7 @@ class Preferencias(context: Context) {
     private fun lerEstadoSincronizacao(): EstadoSincronizacao {
         val casaId = prefs.getString(CHAVE_CASA_ID, null)
         return EstadoSincronizacao(
-            servidorUrl = prefs.getString(CHAVE_SERVIDOR, null),
+            servidorUrl = servidorUrl,
             registrado = prefs.getString(CHAVE_TOKEN, null) != null,
             casa = casaId?.let {
                 Casa(

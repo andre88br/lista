@@ -17,6 +17,11 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Endereco do servidor ja embutido: quem instala o app nao precisa saber
+        // que ele existe. Vem de gradle.properties para trocar sem editar codigo.
+        val servidorPadrao = providers.gradleProperty("lista.servidorPadrao").getOrElse("")
+        buildConfigField("String", "SERVIDOR_PADRAO", "\"$servidorPadrao\"")
     }
 
     buildTypes {
@@ -37,6 +42,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

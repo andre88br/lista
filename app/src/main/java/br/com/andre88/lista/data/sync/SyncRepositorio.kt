@@ -166,7 +166,7 @@ class SyncRepositorio(
 
     // ------------------------------------------------------------ entrar e sair
 
-    /** Confere o endereco e registra este aparelho, se ainda nao tiver token. */
+    /** Troca o endereco do servidor. So usado por quem hospeda em outro lugar. */
     suspend fun configurarServidor(url: String, nomeDoAparelho: String): Result<Unit> = runCatching {
         val limpo = url.trim().trimEnd('/')
         require(limpo.startsWith("https://") || limpo.startsWith("http://")) {
@@ -175,10 +175,20 @@ class SyncRepositorio(
         if (!api.servidorResponde(limpo)) error("nao consegui falar com $limpo")
 
         preferencias.definirServidor(limpo)
-        if (preferencias.token == null) {
-            val resposta = api.registrarDispositivo(limpo, nomeDoAparelho)
-            preferencias.definirDispositivo(resposta.dispositivoId, resposta.token)
-        }
+        garantirRegistro(nomeDoAparelho)
+    }
+
+    /**
+     * Registra o aparelho no servidor, se ainda nao estiver. Acontece sozinho na
+     * primeira vez que a pessoa cria ou entra numa casa: o endereco ja vem no
+     * APK, entao nao ha nada para ela digitar ou entender.
+     */
+    suspend fun garantirRegistro(nomeDoAparelho: String) {
+        if (preferencias.token != null) return
+        val servidor = preferencias.servidorUrl
+            ?: error("este APK foi gerado sem endereco de servidor")
+        val resposta = api.registrarDispositivo(servidor, nomeDoAparelho)
+        preferencias.definirDispositivo(resposta.dispositivoId, resposta.token)
     }
 
     /** Cria a casa e sobe o que ja existe neste celular. */

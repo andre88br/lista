@@ -55,9 +55,19 @@ Resposta esperada:
 {"ok":true,"servico":"lista","agora":"2026-09-04T02:31:00.000Z"}
 ```
 
-Se responder com o cadeado válido, está pronto para configurar no app: **Ajustes → Compartilhar com outra pessoa**.
+Se responder com o cadeado válido, o servidor está pronto.
 
-## 3.3 Quando algo não responde
+## 3.3 Apontar o app para o seu servidor
+
+O endereço fica embutido no APK, para que ninguém precise digitá-lo. Coloque o seu em `gradle.properties`, na raiz do repositório:
+
+```properties
+lista.servidorPadrao=https://andre-lista.duckdns.org
+```
+
+Faça o commit; o próximo APK gerado pelo GitHub Actions já sai apontando para lá. Quem instalar só vai ver **Criar casa** ou **entrar com o código** — o endereço fica recolhido em "Servidor (avançado)", para o dia em que ele mudar.
+
+## 3.4 Quando algo não responde
 
 Os problemas são quase sempre um destes três, nesta ordem:
 
@@ -76,7 +86,7 @@ sudo docker compose logs -f caddy    # problemas de certificado/HTTPS
 sudo docker compose restart          # reiniciar tudo
 ```
 
-## 3.4 Atualizar quando eu mexer no código
+## 3.5 Atualizar quando eu mexer no código
 
 ```bash
 cd ~/lista
@@ -87,7 +97,7 @@ sudo docker compose up -d --build
 
 As alterações no banco são aplicadas sozinhas quando o servidor sobe.
 
-## 3.5 Backup
+## 3.6 Backup
 
 ```bash
 cd ~/lista/servidor
@@ -106,6 +116,6 @@ Para restaurar:
 gunzip -c backups/lista-20260904-0300.sql.gz | sudo docker compose exec -T banco psql -U lista lista
 ```
 
-## 3.6 O que o servidor guarda
+## 3.7 O que o servidor guarda
 
 Só o necessário para o app funcionar: um identificador anônimo de cada aparelho (o token vai gravado apenas como hash), a casa e seu código, os nomes dos produtos e o histórico de leituras. **Sem nome, e-mail, telefone ou localização.** O acesso é sempre pelo token do aparelho, e cada consulta é filtrada pela casa dele — um aparelho nunca enxerga dados de outra casa (tem teste automatizado cobrindo exatamente isso).

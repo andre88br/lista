@@ -99,8 +99,7 @@ fun CasaScreen(
             if (ui.ocupado) LinearProgressIndicator(Modifier.fillMaxWidth())
 
             when {
-                !estado.registrado || estado.servidorUrl == null ->
-                    PassoServidor(urlAtual = estado.servidorUrl, ocupado = ui.ocupado, aoConectar = viewModel::conectar)
+                estado.servidorUrl == null -> SemServidorNoApk()
 
                 estado.casa == null ->
                     PassoCasa(ocupado = ui.ocupado, aoCriar = viewModel::criarCasa, aoEntrar = viewModel::entrar)
@@ -129,33 +128,63 @@ fun CasaScreen(
                     aoSair = viewModel::sair,
                 )
             }
+
+            if (estado.servidorUrl != null) {
+                ServidorAvancado(
+                    url = estado.servidorUrl!!,
+                    ocupado = ui.ocupado,
+                    aoTrocar = viewModel::trocarServidor,
+                )
+            }
         }
     }
 }
 
+/** APK gerado sem endereco de servidor: so acontece em build feito na mao. */
 @Composable
-private fun PassoServidor(urlAtual: String?, ocupado: Boolean, aoConectar: (String) -> Unit) {
-    var url by remember { mutableStateOf(urlAtual ?: "https://") }
-
-    Text("Endereço do servidor", style = MaterialTheme.typography.titleMedium)
+private fun SemServidorNoApk() {
+    Text("Sincronização indisponível", style = MaterialTheme.typography.titleMedium)
     Text(
-        text = "É o endereço do servidor que roda no seu VPS, como https://sua-casa.duckdns.org. " +
-            "Os dois celulares usam o mesmo endereço.",
+        text = "Este APK foi gerado sem endereço de servidor. Baixe a versão publicada " +
+            "pelo repositório, ou informe um endereço em \"Servidor\", abaixo.",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    OutlinedTextField(
-        value = url,
-        onValueChange = { url = it.trim() },
-        label = { Text("https://...") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Button(
-        onClick = { aoConectar(url) },
-        enabled = !ocupado && url.length > 10,
-        modifier = Modifier.fillMaxWidth(),
-    ) { Text("Conectar") }
+}
+
+/**
+ * O endereco do servidor ja vem no APK, entao fica recolhido: quem usa o app
+ * nao precisa saber que ele existe. Serve para quem hospeda em outro lugar ou
+ * para o dia em que o endereco mudar.
+ */
+@Composable
+private fun ServidorAvancado(url: String, ocupado: Boolean, aoTrocar: (String) -> Unit) {
+    var aberto by remember { mutableStateOf(false) }
+    var novoEndereco by remember(url) { mutableStateOf(url) }
+
+    HorizontalDivider()
+    TextButton(onClick = { aberto = !aberto }, modifier = Modifier.fillMaxWidth()) {
+        Text(if (aberto) "Ocultar servidor" else "Servidor (avançado)")
+    }
+    if (aberto) {
+        Text(
+            text = "Em uso: $url",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = novoEndereco,
+            onValueChange = { novoEndereco = it.trim() },
+            label = { Text("Endereço do servidor") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedButton(
+            onClick = { aoTrocar(novoEndereco) },
+            enabled = !ocupado && novoEndereco != url && novoEndereco.length > 10,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Usar este servidor") }
+    }
 }
 
 @Composable
@@ -170,8 +199,8 @@ private fun PassoCasa(
 
     Text("Criar uma casa", style = MaterialTheme.typography.titleMedium)
     Text(
-        text = "Cria a casa neste celular e gera um código para a outra pessoa entrar. " +
-            "O que já está aqui vai junto.",
+        text = "Gera um código para a outra pessoa entrar e passar a dividir a mesma " +
+            "lista, o mesmo estoque e os mesmos comprados. O que já está neste celular vai junto.",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -137,7 +137,6 @@ fun AjustesScreen(
                         text = when {
                             sincronizacao.casa != null ->
                                 "Casa \"${sincronizacao.casa!!.nome}\" · código ${sincronizacao.casa!!.codigo}"
-                            sincronizacao.registrado -> "Servidor conectado. Falta criar ou entrar numa casa."
                             else -> "Use o mesmo estoque e a mesma lista em dois celulares."
                         },
                         style = MaterialTheme.typography.bodyMedium,
