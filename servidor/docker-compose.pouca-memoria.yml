@@ -1,0 +1,22 @@
+# Ajustes para maquinas de 1 GB de RAM (a VM.Standard.E2.1.Micro do plano
+# gratuito da Oracle). O instalador ativa este arquivo sozinho quando detecta
+# pouca memoria, e tambem cria swap.
+#
+# Sem isto, o Postgres reserva memoria demais e o sistema mata algum processo
+# no meio do uso.
+
+services:
+  banco:
+    command: >
+      postgres
+      -c shared_buffers=96MB
+      -c effective_cache_size=256MB
+      -c maintenance_work_mem=32MB
+      -c work_mem=4MB
+      -c max_connections=20
+      -c wal_buffers=4MB
+
+  api:
+    environment:
+      # O servidor atende duas pessoas: nao precisa de heap grande.
+      NODE_OPTIONS: --max-old-space-size=160

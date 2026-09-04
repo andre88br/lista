@@ -16,15 +16,34 @@ else
   SUDO="sudo"
 fi
 
-titulo "1/6 Conferindo o sistema"
+titulo "1/7 Conferindo o sistema"
 echo "Arquitetura: $(uname -m)"
 MEM_MB=$(free -m | awk '/^Mem:/ {print $2}')
 echo "Memoria: ${MEM_MB} MB"
-if [ "$MEM_MB" -lt 900 ]; then
-  vermelho "Memoria muito baixa. O Postgres pode nao subir. Me avise para eu ajustar a configuracao."
+
+POUCA_MEMORIA=0
+if [ "$MEM_MB" -lt 1500 ]; then
+  POUCA_MEMORIA=1
+  amarelo "Maquina pequena: vou usar a configuracao enxuta e criar swap."
 fi
 
-titulo "2/6 Docker"
+titulo "2/7 Swap"
+# Em maquinas de 1 GB, sem swap o sistema mata processos durante o build.
+if [ "$POUCA_MEMORIA" -eq 1 ] && [ -z "$(swapon --show 2>/dev/null)" ]; then
+  echo "Criando 2 GB de swap..."
+  $SUDO fallocate -l 2G /swapfile || $SUDO dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+  $SUDO chmod 600 /swapfile
+  $SUDO mkswap /swapfile >/dev/null
+  $SUDO swapon /swapfile
+  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | $SUDO tee -a /etc/fstab >/dev/null
+  verde "Swap criado."
+elif [ "$POUCA_MEMORIA" -eq 1 ]; then
+  verde "Swap ja existe."
+else
+  echo "Memoria suficiente; swap dispensavel."
+fi
+
+titulo "3/7 Docker"
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
   verde "Docker ja instalado: $(docker --version)"
 else
@@ -35,7 +54,7 @@ else
 fi
 DOCKER="$SUDO docker"
 
-titulo "3/6 Configuracao"
+titulo "4/7 Configuracao"
 if [ -f .env ]; then
   verde "Arquivo .env ja existe; mantendo o que esta la."
   # shellcheck disable=SC1091
@@ -53,11 +72,16 @@ DOMINIO=$DOMINIO
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-}
 EOF
+  # COMPOSE_FILE no .env faz todo "docker compose" seguinte usar os mesmos
+  # arquivos, inclusive quando voce rodar na mao depois.
+  if [ "$POUCA_MEMORIA" -eq 1 ]; then
+    echo "COMPOSE_FILE=docker-compose.yml:docker-compose.pouca-memoria.yml" >> .env
+  fi
   chmod 600 .env
   verde "Arquivo .env criado (senha do banco gerada automaticamente)."
 fi
 
-titulo "4/6 Portas 80 e 443"
+titulo "5/7 Portas 80 e 443"
 # A Oracle tem dois firewalls. Este script cuida do de dentro da maquina;
 # o do painel (Security List da VCN) so voce consegue liberar, pela web.
 if command -v iptables >/dev/null 2>&1; then
@@ -74,7 +98,7 @@ if command -v iptables >/dev/null 2>&1; then
 fi
 echo "Lembrete: no painel da Oracle, a Security List da sub-rede tambem precisa liberar 80 e 443."
 
-titulo "5/6 DuckDNS"
+titulo "6/7 DuckDNS"
 # shellcheck disable=SC1091
 . ./.env
 if [ -n "${DUCKDNS_TOKEN:-}" ]; then
@@ -86,7 +110,7 @@ else
   echo "Sem token do DuckDNS; pulando a atualizacao automatica de IP."
 fi
 
-titulo "6/6 Subindo os conteineres"
+titulo "7/7 Subindo os conteineres"
 $DOCKER compose up -d --build
 
 echo "Esperando o servidor responder..."

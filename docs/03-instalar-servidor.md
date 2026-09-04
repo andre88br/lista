@@ -26,6 +26,12 @@ No fim ele imprime o endereço para colocar no app, algo como `https://andre-lis
 
 > **A primeira execução demora** — Docker, imagens e certificado. Entre 5 e 10 minutos é normal.
 
+### Se a sua máquina tem 1 GB (a AMD `E2.1.Micro`)
+
+Não precisa fazer nada diferente: o instalador detecta a pouca memória, cria 2 GB de swap e sobe o banco com uma configuração enxuta (`docker-compose.pouca-memoria.yml`). Ele grava essa escolha no `.env`, então os comandos `docker compose` que você rodar depois já usam a mesma configuração.
+
+O build da imagem é a parte mais pesada; com o swap criado, ele passa. Se ainda assim o processo for morto por falta de memória (a mensagem costuma ser `Killed` ou `exit code 137`), me avise que eu passo a construir a imagem fora da máquina.
+
 ## 3.2 Conferir que está no ar
 
 Do seu computador (não do VPS):

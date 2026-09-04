@@ -53,12 +53,50 @@ Em 1–2 minutos a instância fica **RUNNING**. Anote o **Public IP address** qu
 
 ### Se aparecer "Out of capacity"
 
-É o erro mais comum do plano gratuito: as máquinas Ampere (ARM) vivem lotadas. O que fazer, em ordem:
+```
+Out of capacity for shape VM.Standard.A1.Flex in availability domain AD-1.
+```
 
-1. Tente de novo em horários diferentes (madrugada costuma funcionar). Não desista na primeira.
-2. Troque o **Availability Domain** (AD-1, AD-2, AD-3) na hora de criar.
-3. Reduza para **1 OCPU / 6 GB** — pega vaga com mais facilidade e ainda é suficiente.
-4. Último recurso: use a máquina AMD **VM.Standard.E2.1.Micro** (1 GB de RAM). Funciona para este app, mas fica apertado; me avise se for esse o caso que eu ajusto a configuração do banco.
+É o erro mais comum do plano gratuito, e **não é problema da sua conta nem da sua configuração**: as máquinas Ampere (ARM) gratuitas vivem lotadas, e a capacidade libera em janelas curtas e imprevisíveis. Quem consegue é quem insiste — por isso o caminho abaixo é automatizar a insistência, não ficar clicando.
+
+#### Caminho 1 (recomendado): deixar um script tentando
+
+A Oracle tem um terminal dentro do próprio painel, o **Cloud Shell**, onde os comandos já vêm autenticados como você. Dá para deixar um script tentando criar a máquina de minuto em minuto.
+
+1. No painel, clique no ícone **`>_`** no canto superior direito (Cloud Shell). A primeira abertura leva ~1 minuto.
+2. Cole:
+
+```bash
+git clone -b claude/shopping-list-barcode-app-gf9cmb https://github.com/andre88br/lista.git
+bash lista/servidor/tentar-a1.sh
+```
+
+Ele descobre sozinho a sua rede, a imagem do Ubuntu e os availability domains, gera uma chave SSH e tenta criar a máquina em cada AD, repetindo até conseguir. Pode deixar a aba aberta; quando conseguir, ele imprime o **IP público** e o caminho da chave.
+
+Por padrão ele pede **1 OCPU e 6 GB**, que pega vaga com bem mais facilidade do que 2/12 e é de sobra para este app. Se quiser tentar maior:
+
+```bash
+OCPUS=2 MEMORIA_GB=12 bash lista/servidor/tentar-a1.sh
+```
+
+> O Cloud Shell desconecta depois de um tempo ocioso; se cair, é só rodar de novo. Cada tentativa é independente, nada quebra por repetir.
+
+#### Caminho 2: a máquina AMD, que está sempre disponível
+
+Se você quer o servidor no ar **hoje**, use a outra máquina do plano gratuito: **VM.Standard.E2.1.Micro** (AMD, 1 GB de RAM). Ela praticamente sempre tem vaga.
+
+Na criação da instância: **Change shape** → aba **AMD** → **VM.Standard.E2.1.Micro**. O resto do guia é igual.
+
+1 GB é pouco, mas o instalador detecta isso sozinho: cria 2 GB de swap e sobe o banco com uma configuração enxuta. Para duas pessoas usando uma lista de compras, dá conta. Se um dia sobrar capacidade ARM, dá para migrar levando um backup (`servidor/backup.sh`).
+
+#### Caminho 3: trocar a conta para "Pay As You Go"
+
+Contas pagas têm prioridade na fila das máquinas ARM, e os recursos **Always Free continuam gratuitos** numa conta paga — você só paga se criar algo além do limite gratuito. É a solução definitiva para o "out of capacity", com o risco de, por descuido, criar um recurso cobrado. Decida com calma; os caminhos 1 e 2 resolvem sem isso.
+
+#### O que *não* adianta
+
+- **Trocar de região**: os recursos Always Free só existem na sua região de origem, e ela não pode ser alterada depois que a conta é criada.
+- **Ficar clicando em Create**: funciona, mas é o mesmo que o caminho 1 fazendo você de robô.
 
 ---
 
