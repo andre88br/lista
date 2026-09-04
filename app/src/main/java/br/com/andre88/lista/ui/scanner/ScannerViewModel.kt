@@ -6,6 +6,7 @@ import br.com.andre88.lista.data.ListaRepository
 import br.com.andre88.lista.data.Preferencias
 import br.com.andre88.lista.data.ResultadoLeitura
 import br.com.andre88.lista.data.db.ProdutoEntity
+import br.com.andre88.lista.data.sync.SyncRepositorio
 import br.com.andre88.lista.domain.Modo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
 data class UltimaLeitura(
     val codigoBarras: String,
     val nome: String,
-    val eventoId: Long,
+    val eventoId: String,
     val descricao: String,
     val quantidadeNaLista: Int,
 )
@@ -45,6 +46,7 @@ data class ScannerUiState(
 class ScannerViewModel(
     private val repositorio: ListaRepository,
     private val preferencias: Preferencias,
+    private val sync: SyncRepositorio,
     modo: Modo,
 ) : ViewModel() {
 
@@ -66,7 +68,10 @@ class ScannerViewModel(
 
         viewModelScope.launch {
             when (val resultado = repositorio.registrarLeitura(codigo, _estado.value.modo)) {
-                is ResultadoLeitura.Registrada -> mostrarRegistrada(resultado)
+                is ResultadoLeitura.Registrada -> {
+                    mostrarRegistrada(resultado)
+                    sync.solicitarEnvio()
+                }
                 is ResultadoLeitura.ProdutoDesconhecido -> abrirCadastro(resultado.codigoBarras)
             }
         }
@@ -116,6 +121,7 @@ class ScannerViewModel(
             val resultado = repositorio.cadastrarEAplicar(produto, _estado.value.modo)
             _estado.update { it.copy(cadastro = null) }
             mostrarRegistrada(resultado)
+            sync.solicitarEnvio()
         }
     }
 
@@ -130,6 +136,7 @@ class ScannerViewModel(
         viewModelScope.launch {
             val ok = repositorio.desfazer(ultima.eventoId)
             ultimaLeituraPorCodigo.remove(ultima.codigoBarras)
+            if (ok) sync.solicitarEnvio()
             _estado.update {
                 it.copy(
                     ultima = null,
@@ -151,10 +158,11 @@ class ScannerViewModel(
             Modo.GUARDAR -> "no estoque"
             Modo.ACABOU -> "na lista de compras"
         }
+        val visivel = q.exibir()
         val quantidade = when (resultado.modo) {
-            Modo.MERCADO -> q.carrinho
-            Modo.GUARDAR -> q.estoque
-            Modo.ACABOU -> q.lista
+            Modo.MERCADO -> visivel.carrinho
+            Modo.GUARDAR -> visivel.estoque
+            Modo.ACABOU -> visivel.lista
         }
         _estado.update {
             it.copy(

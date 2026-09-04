@@ -16,9 +16,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -32,6 +36,7 @@ import androidx.navigation.navArgument
 import br.com.andre88.lista.AppContainer
 import br.com.andre88.lista.domain.Modo
 import br.com.andre88.lista.ui.ajustes.AjustesScreen
+import br.com.andre88.lista.ui.casa.CasaScreen
 import br.com.andre88.lista.ui.home.HomeScreen
 import br.com.andre88.lista.ui.listas.CarrinhoScreen
 import br.com.andre88.lista.ui.listas.EstoqueScreen
@@ -45,6 +50,7 @@ object Rotas {
     const val ESTOQUE = "estoque"
     const val CARRINHO = "carrinho"
     const val AJUSTES = "ajustes"
+    const val CASA = "casa"
     const val SCANNER = "scanner/{modo}"
 
     fun scanner(modo: Modo) = "scanner/${modo.name}"
@@ -68,6 +74,16 @@ fun AppLista(container: AppContainer) {
     val navController = rememberNavController()
     val listasViewModel: ListasViewModel = viewModel(factory = fabricaListas(container))
     val totais by listasViewModel.totais.collectAsStateWithLifecycle()
+
+    // Ao voltar para o app, puxa o que a outra pessoa fez enquanto ele estava fechado.
+    val donoDoCiclo = LocalLifecycleOwner.current
+    DisposableEffect(donoDoCiclo) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_START) listasViewModel.sincronizarAgora()
+        }
+        donoDoCiclo.lifecycle.addObserver(observador)
+        onDispose { donoDoCiclo.lifecycle.removeObserver(observador) }
+    }
 
     val entradaAtual by navController.currentBackStackEntryAsState()
     val rotaAtual = entradaAtual?.destination?.route
@@ -141,6 +157,13 @@ fun AppLista(container: AppContainer) {
                 }
                 composable(Rotas.AJUSTES) {
                     AjustesScreen(
+                        container = container,
+                        aoVoltar = { navController.popBackStack() },
+                        aoAbrirCasa = { navController.navigate(Rotas.CASA) },
+                    )
+                }
+                composable(Rotas.CASA) {
+                    CasaScreen(
                         container = container,
                         aoVoltar = { navController.popBackStack() },
                     )

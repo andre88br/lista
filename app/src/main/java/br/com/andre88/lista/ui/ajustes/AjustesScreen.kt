@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,12 +48,14 @@ import kotlinx.coroutines.withContext
 fun AjustesScreen(
     container: AppContainer,
     aoVoltar: () -> Unit,
+    aoAbrirCasa: () -> Unit,
 ) {
     val contexto = LocalContext.current
     val escopo = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val preferencias = container.preferencias
 
+    val sincronizacao by preferencias.sincronizacao.collectAsStateWithLifecycle()
     val consultarOff by preferencias.consultarOpenFoodFacts.collectAsStateWithLifecycle()
     val somAoLer by preferencias.somAoLer.collectAsStateWithLifecycle()
     val cooldown by preferencias.cooldownMs.collectAsStateWithLifecycle()
@@ -124,6 +127,27 @@ fun AjustesScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = aoAbrirCasa,
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Compartilhar com outra pessoa", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = when {
+                            sincronizacao.casa != null ->
+                                "Casa \"${sincronizacao.casa!!.nome}\" · código ${sincronizacao.casa!!.codigo}"
+                            sincronizacao.registrado -> "Servidor conectado. Falta criar ou entrar numa casa."
+                            else -> "Use o mesmo estoque e a mesma lista em dois celulares."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
             LinhaAjuste(
                 titulo = "Buscar nome na internet",
                 descricao = "Ao ler um código novo, procura o produto no Open Food Facts. " +

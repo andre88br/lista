@@ -6,19 +6,19 @@ import org.junit.Test
 
 class ScanTransitionsTest {
 
+    private fun ItemQtds.visivel() = exibir()
+
     @Test
     fun `no mercado move da lista para o carrinho`() {
-        val r = ScanTransitions.aplicar(ItemQtds(estoque = 0, lista = 2, carrinho = 0), Modo.MERCADO)
-        assertEquals(ItemQtds(estoque = 0, lista = 1, carrinho = 1), r.depois)
-        assertEquals(1, r.deltaCarrinho)
-        assertEquals(-1, r.deltaLista)
+        val r = ScanTransitions.aplicar(ItemQtds(lista = 2), Modo.MERCADO)
+        assertEquals(ItemQtds(lista = 1, carrinho = 1), r.depois)
     }
 
     @Test
     fun `no mercado sem estar na lista ainda vai para o carrinho`() {
         val r = ScanTransitions.aplicar(ItemQtds(), Modo.MERCADO)
         assertEquals(ItemQtds(carrinho = 1), r.depois)
-        assertEquals(0, r.deltaLista)
+        assertEquals(0, r.deltas.lista)
     }
 
     @Test
@@ -31,7 +31,7 @@ class ScanTransitionsTest {
     fun `guardando sem carrinho apenas soma no estoque`() {
         val r = ScanTransitions.aplicar(ItemQtds(estoque = 3), Modo.GUARDAR)
         assertEquals(ItemQtds(estoque = 4), r.depois)
-        assertEquals(0, r.deltaCarrinho)
+        assertEquals(0, r.deltas.carrinho)
     }
 
     @Test
@@ -44,14 +44,14 @@ class ScanTransitionsTest {
     fun `acabou sem estoque ainda entra na lista`() {
         val r = ScanTransitions.aplicar(ItemQtds(), Modo.ACABOU)
         assertEquals(ItemQtds(lista = 1), r.depois)
-        assertEquals(0, r.deltaEstoque)
+        assertEquals(0, r.deltas.estoque)
     }
 
     @Test
     fun `ciclo completo volta ao ponto de partida`() {
         var q = ItemQtds(estoque = 1)
         q = ScanTransitions.aplicar(q, Modo.ACABOU).depois
-        assertEquals(ItemQtds(estoque = 0, lista = 1), q)
+        assertEquals(ItemQtds(lista = 1), q)
         q = ScanTransitions.aplicar(q, Modo.MERCADO).depois
         assertEquals(ItemQtds(carrinho = 1), q)
         q = ScanTransitions.aplicar(q, Modo.GUARDAR).depois
@@ -59,34 +59,56 @@ class ScanTransitionsTest {
     }
 
     @Test
-    fun `desfazer devolve o estado anterior mesmo com contador zerado`() {
-        val antes = ItemQtds(estoque = 0, lista = 0, carrinho = 0)
-        val r = ScanTransitions.aplicar(antes, Modo.ACABOU)
-        val revertido = ScanTransitions.reverter(r.depois, r.deltaEstoque, r.deltaLista, r.deltaCarrinho)
-        assertEquals(antes, revertido)
-    }
-
-    @Test
-    fun `desfazer de varias leituras seguidas devolve o estado inicial`() {
-        val inicial = ItemQtds(estoque = 2, lista = 1, carrinho = 0)
-        val r1 = ScanTransitions.aplicar(inicial, Modo.ACABOU)
-        val r2 = ScanTransitions.aplicar(r1.depois, Modo.MERCADO)
-        var q = ScanTransitions.reverter(r2.depois, r2.deltaEstoque, r2.deltaLista, r2.deltaCarrinho)
-        q = ScanTransitions.reverter(q, r1.deltaEstoque, r1.deltaLista, r1.deltaCarrinho)
-        assertEquals(inicial, q)
-    }
-
-    @Test
-    fun `nenhum contador fica negativo em nenhum modo`() {
+    fun `nada aparece negativo na tela`() {
         for (modo in Modo.entries) {
-            val d = ScanTransitions.aplicar(ItemQtds(), modo).depois
-            assertTrue("$modo gerou negativo: $d", d.estoque >= 0 && d.lista >= 0 && d.carrinho >= 0)
+            val d = ScanTransitions.aplicar(ItemQtds(), modo).depois.visivel()
+            assertTrue("$modo mostrou negativo: $d", d.estoque >= 0 && d.lista >= 0 && d.carrinho >= 0)
         }
     }
 
     @Test
-    fun `item vazio e detectado para poder sumir das listas`() {
+    fun `guardar um produto com estoque negativo mostra 1 na tela`() {
+        // Os dois marcaram "acabou" no ultimo pacote: a soma crua ficou em -1.
+        // Ao guardar uma unidade, a pessoa precisa VER 1 no estoque, e nao 0.
+        val comDivida = ItemQtds(estoque = -1)
+        val r = ScanTransitions.aplicar(comDivida, Modo.GUARDAR)
+        assertEquals(2, r.deltas.estoque)
+        assertEquals(1, r.depois.visivel().estoque)
+    }
+
+    @Test
+    fun `ajuste manual para cima quita a divida`() {
+        val d = ScanTransitions.deltasDeAjuste(ItemQtds(lista = -2), Campo.LISTA, 1)
+        assertEquals(3, d.lista)
+        assertEquals(1, ItemQtds(lista = -2).plus(d).visivel().lista)
+    }
+
+    @Test
+    fun `ajuste manual para baixo nao inventa divida`() {
+        val d = ScanTransitions.deltasDeAjuste(ItemQtds(lista = 0), Campo.LISTA, -1)
+        assertEquals(0, d.lista, "tirar de um contador vazio nao pode gerar delta")
+    }
+
+    @Test
+    fun `zerar tira exatamente o que esta visivel`() {
+        val d = ScanTransitions.deltasParaZerar(ItemQtds(estoque = 5), Campo.ESTOQUE)
+        assertEquals(-5, d.estoque)
+        assertEquals(0, ItemQtds(estoque = 5).plus(d).estoque)
+    }
+
+    @Test
+    fun `zerar um contador ja negativo nao mexe em nada`() {
+        val d = ScanTransitions.deltasParaZerar(ItemQtds(estoque = -3), Campo.ESTOQUE)
+        assertTrue(d.nulo)
+    }
+
+    @Test
+    fun `item vazio some das listas mesmo com divida`() {
         assertTrue(ItemQtds().vazio)
+        assertTrue(ItemQtds(estoque = -2).vazio)
         assertTrue(!ItemQtds(lista = 1).vazio)
     }
 }
+
+private fun assertEquals(esperado: Int, obtido: Int, mensagem: String) =
+    org.junit.Assert.assertEquals(mensagem, esperado.toLong(), obtido.toLong())

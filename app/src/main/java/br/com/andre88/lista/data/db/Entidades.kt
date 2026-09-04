@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import br.com.andre88.lista.domain.Deltas
 import br.com.andre88.lista.domain.ItemQtds
 
 /** Cadastro do produto. Um codigo de barras so precisa ser identificado uma vez. */
@@ -17,6 +18,8 @@ data class ProdutoEntity(
     /** OFF (veio do Open Food Facts) ou MANUAL (digitado por voce). */
     val origemNome: String = ORIGEM_MANUAL,
     val criadoEm: Long = System.currentTimeMillis(),
+    /** Nome de produto nao e contador: na sincronizacao, vence a escrita mais recente. */
+    @ColumnInfo(defaultValue = "0") val atualizadoEm: Long = System.currentTimeMillis(),
 ) {
     companion object {
         const val ORIGEM_OFF = "OFF"
@@ -24,7 +27,11 @@ data class ProdutoEntity(
     }
 }
 
-/** Quantidades do produto em cada lista. Um produto pode estar em mais de uma ao mesmo tempo. */
+/**
+ * Quantidades do produto em cada lista, guardadas como **soma crua** dos deltas.
+ * Podem ficar negativas; as consultas e a tela e que limitam em zero. Ver
+ * [br.com.andre88.lista.domain.ItemQtds].
+ */
 @Entity(tableName = "item")
 data class ItemEntity(
     @PrimaryKey val codigoBarras: String,
@@ -46,13 +53,17 @@ data class ItemEntity(
     }
 }
 
-/** Historico de leituras: e o que torna o "Desfazer" possivel. */
+/**
+ * Historico de leituras. E a unidade de sincronizacao: cada linha e um delta com
+ * id proprio, e a quantidade de um produto e a soma dos deltas. O id vem do
+ * celular, entao reenviar o mesmo evento nunca conta duas vezes.
+ */
 @Entity(
     tableName = "scan_evento",
-    indices = [Index("timestamp"), Index("codigoBarras")],
+    indices = [Index("timestamp"), Index("codigoBarras"), Index("sincronizado")],
 )
 data class ScanEventoEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey val id: String,
     val codigoBarras: String,
     val modo: String,
     val deltaEstoque: Int,
@@ -61,9 +72,20 @@ data class ScanEventoEntity(
     val timestamp: Long = System.currentTimeMillis(),
     /** Marcado quando o evento ja foi desfeito, para nao desfazer duas vezes. */
     @ColumnInfo(defaultValue = "0") val desfeito: Boolean = false,
-)
+    /** 0 enquanto o evento ainda nao subiu para o servidor. */
+    @ColumnInfo(defaultValue = "0") val sincronizado: Boolean = false,
+    /** Qual aparelho gerou a leitura (nulo quando o app roda sem sincronizacao). */
+    val autorId: String? = null,
+) {
+    fun paraDeltas(): Deltas = Deltas(estoque = deltaEstoque, lista = deltaLista, carrinho = deltaCarrinho)
 
-/** Linha exibida nas listas: quantidades + dados do produto. */
+    companion object {
+        const val MODO_AJUSTE = "AJUSTE"
+        const val MODO_DESFAZER = "DESFAZER"
+    }
+}
+
+/** Linha exibida nas listas. As quantidades ja vem limitadas em zero pela consulta. */
 data class ItemComProduto(
     val codigoBarras: String,
     val nome: String,

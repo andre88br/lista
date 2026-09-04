@@ -26,7 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import br.com.andre88.lista.data.Campo
+import br.com.andre88.lista.domain.Campo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
