@@ -1,6 +1,5 @@
 package br.com.andre88.lista.ui.casa
 
-import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.andre88.lista.data.ListaRepository
@@ -34,10 +33,8 @@ class CasaViewModel(
     private val _ui = MutableStateFlow(CasaUiState())
     val ui: StateFlow<CasaUiState> = _ui.asStateFlow()
 
-    private val nomeDoAparelho: String = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
-
-    fun trocarServidor(url: String) = executar("Servidor alterado") {
-        sync.configurarServidor(url, nomeDoAparelho)
+    fun trocarServidor(url: String) = executar("Servidor alterado; entre de novo") {
+        sync.configurarServidor(url)
     }
 
     fun criarCasa(nome: String) = executar("Casa criada") {

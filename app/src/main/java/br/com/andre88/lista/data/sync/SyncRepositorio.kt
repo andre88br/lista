@@ -168,16 +168,21 @@ class SyncRepositorio(
 
     // ------------------------------------------------------------ entrar e sair
 
-    /** Troca o endereco do servidor. So usado por quem hospeda em outro lugar. */
-    suspend fun configurarServidor(url: String, nomeDoAparelho: String): Result<Unit> = runCatching {
+    /**
+     * Troca o endereco do servidor. So usado por quem hospeda em outro lugar.
+     * A sessao e a casa pertencem ao servidor antigo, entao a troca encerra a
+     * sessao e o app volta para a tela de login apontando para o novo.
+     */
+    suspend fun configurarServidor(url: String): Result<Unit> = runCatching {
         val limpo = url.trim().trimEnd('/')
         require(limpo.startsWith("https://") || limpo.startsWith("http://")) {
             "o endereco precisa comecar com https://"
         }
         if (!api.servidorResponde(limpo)) error("nao consegui falar com $limpo")
 
+        preferencias.sair()
         preferencias.definirServidor(limpo)
-        garantirRegistro(nomeDoAparelho)
+        SyncWorker.cancelarTudo(contexto)
     }
 
     /**
