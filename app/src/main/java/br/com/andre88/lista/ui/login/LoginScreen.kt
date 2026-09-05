@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,8 @@ fun LoginScreen(container: AppContainer) {
     val viewModel: LoginViewModel = viewModel(factory = fabricaLogin(container))
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    // O contexto daqui e o da Activity, que e o que o seletor de contas exige.
+    val contexto = LocalContext.current
 
     LaunchedEffect(ui.erro) {
         ui.erro?.let {
@@ -89,7 +92,7 @@ fun LoginScreen(container: AppContainer) {
 
             Spacer(Modifier.height(32.dp))
             Button(
-                onClick = viewModel::entrar,
+                onClick = { viewModel.entrar(contexto) },
                 enabled = !ui.entrando,
                 modifier = Modifier.fillMaxWidth(),
             ) {
