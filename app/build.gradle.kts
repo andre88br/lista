@@ -10,6 +10,25 @@ android {
     namespace = "br.com.andre88.lista"
     compileSdk = 35
 
+    // A chave precisa ser sempre a mesma: o login com Google so funciona se a
+    // impressao digital do APK for a que esta registrada no console do Google.
+    // A chave vem encriptada no repositorio e o CI a decripta com o segredo
+    // LISTA_KEYSTORE_SENHA; sem o segredo, cai na chave de debug padrao e o
+    // login nao funciona (o resto do app, sim).
+    val arquivoDaChave = rootProject.file("app/chave/chave-lista.jks")
+    val senhaDaChave = providers.environmentVariable("LISTA_KEYSTORE_SENHA").orNull
+
+    signingConfigs {
+        if (arquivoDaChave.exists() && !senhaDaChave.isNullOrBlank()) {
+            create("lista") {
+                storeFile = arquivoDaChave
+                storePassword = senhaDaChave
+                keyAlias = "lista"
+                keyPassword = senhaDaChave
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "br.com.andre88.lista"
         minSdk = 24
@@ -25,9 +44,16 @@ android {
     }
 
     buildTypes {
+        val assinaturaFixa = signingConfigs.findByName("lista")
+        debug {
+            // Debug tambem assinado com a chave fixa: e o APK que voces instalam,
+            // e e a impressao digital dele que o Google precisa reconhecer.
+            assinaturaFixa?.let { signingConfig = it }
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            assinaturaFixa?.let { signingConfig = it }
         }
     }
 

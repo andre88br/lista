@@ -14,3 +14,6 @@ local.properties
 servidor/node_modules/
 servidor/.env
 servidor/backups/
+
+# A chave vai versionada encriptada (.enc); a decriptada, nunca.
+app/chave/chave-lista.jks

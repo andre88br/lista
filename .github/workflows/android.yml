@@ -27,6 +27,24 @@ jobs:
       - name: Permissao do wrapper
         run: chmod +x gradlew
 
+      # Sem o segredo (por exemplo, num fork), o build segue com a chave de
+      # debug padrao: o app compila e roda, so o login com Google nao funciona.
+      - name: Preparar a chave de assinatura
+        env:
+          SENHA: ${{ secrets.LISTA_KEYSTORE_SENHA }}
+        run: |
+          if [ -z "$SENHA" ]; then
+            echo "::warning::Segredo LISTA_KEYSTORE_SENHA ausente; APK sairá com a chave de debug padrão e o login com Google não funcionará."
+            exit 0
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 \
+            -in app/chave/chave-lista.jks.enc \
+            -out app/chave/chave-lista.jks \
+            -pass "pass:$SENHA"
+          echo "Chave decriptada."
+          keytool -list -v -keystore app/chave/chave-lista.jks -storepass "$SENHA" \
+            | grep -m1 "SHA1:" || true
+
       - name: Testes unitarios
         run: ./gradlew testDebugUnitTest --stacktrace
 
@@ -34,7 +52,17 @@ jobs:
         run: ./gradlew lintDebug --stacktrace
 
       - name: Gerar APK de debug
+        env:
+          LISTA_KEYSTORE_SENHA: ${{ secrets.LISTA_KEYSTORE_SENHA }}
         run: ./gradlew assembleDebug --stacktrace
+
+      - name: Conferir com que chave o APK foi assinado
+        env:
+          LISTA_KEYSTORE_SENHA: ${{ secrets.LISTA_KEYSTORE_SENHA }}
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          FERRAMENTAS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$FERRAMENTAS/apksigner" verify --print-certs "$APK" | grep -i "SHA-1" || true
 
       - name: Publicar APK
         uses: actions/upload-artifact@v4
