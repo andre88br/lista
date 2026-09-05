@@ -60,7 +60,17 @@ Por isso a chave vive encriptada no repositório e o CI a decripta com o segredo
 |---|---|
 | "Nenhuma conta Google encontrada" | o aparelho não tem conta Google configurada |
 | O seletor de contas nem abre | SHA-1 ou nome do pacote errados no cliente Android, ou APK assinado com outra chave |
+| Fica em "Entrando…" e depois diz que a solicitação foi cancelada | opção errada do Credential Manager (veja abaixo) |
 | "O Google recusou este login" | o e-mail não está em *Test users*, ou o Client ID do app difere do servidor |
 | "O servidor não está configurado" | falta `GOOGLE_CLIENT_ID` no `.env` do servidor |
 
 Para conferir com que chave o APK saiu, o log do CI imprime a impressão digital no passo *"Conferir com que chave o APK foi assinado"*.
+
+### A armadilha das duas opções do Credential Manager
+
+O Credential Manager tem duas opções parecidas, e escolher a errada faz o app parecer travado:
+
+- **`GetGoogleIdOption`** é para login automático. Ela lista contas que **já autorizaram o aplicativo antes**. Numa instalação nova ninguém autorizou nada, então ela não tem o que mostrar: a chamada fica pendurada e o Google acaba reportando a solicitação como cancelada pelo app.
+- **`GetSignInWithGoogleOption`** é a que corresponde a um botão "Entrar com o Google": abre a escolha de conta sempre. É a correta aqui.
+
+As duas devolvem o mesmo tipo de credencial, então trocar não muda nada no resto do fluxo.
