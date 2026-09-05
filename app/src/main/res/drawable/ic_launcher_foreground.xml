@@ -1,17 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Carrinho de compras com o codigo de barras dentro do cesto.
+
+  O grupo externo encolhe o desenho para dentro da zona segura do icone
+  adaptativo: sem isso, as rodas e a barra mais alta seriam cortadas em
+  launchers de mascara redonda.
+
+  O contorno verde sob o contorno ambar e o que separa o carrinho das barras
+  brancas que passam atras dele.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Codigo de barras estilizado -->
-    <group android:translateX="0" android:translateY="0">
-        <path android:fillColor="#FFFFFF" android:pathData="M33,36h4v36h-4z" />
-        <path android:fillColor="#FFFFFF" android:pathData="M40,36h2v36h-2z" />
-        <path android:fillColor="#FFFFFF" android:pathData="M45,36h6v36h-6z" />
-        <path android:fillColor="#FFFFFF" android:pathData="M54,36h2v36h-2z" />
-        <path android:fillColor="#FFFFFF" android:pathData="M59,36h4v36h-4z" />
-        <path android:fillColor="#FFFFFF" android:pathData="M66,36h2v36h-2z" />
-        <path android:fillColor="#FFFFFF" android:pathData="M71,36h4v36h-4z" />
+
+  <group
+      android:translateX="10.14"
+      android:translateY="6.27"
+      android:scaleX="0.86"
+      android:scaleY="0.86">
+
+    <!-- Codigo de barras acima do cesto -->
+    <path android:pathData="M38.0,24.0h3.0v18.0h-3.0z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M43.0,24.0h1.6v18.0h-1.6z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M46.6,24.0h4.2v18.0h-4.2z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M53.0,24.0h2.0v18.0h-2.0z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M57.0,24.0h3.4v18.0h-3.4z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M62.6,24.0h1.6v18.0h-1.6z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M66.4,24.0h2.6v18.0h-2.6z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M71.2,24.0h4.0v18.0h-4.0z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M77.4,24.0h2.0v18.0h-2.0z" android:fillColor="#FFFFFF"/>
+
+    <!-- Codigo de barras dentro do cesto, recortado por ele -->
+    <group>
+      <clip-path android:pathData="M34,42 L84,42 L77,70 L45,70 Z"/>
+      <path android:pathData="M38.0,42h3.0v28.0h-3.0z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M43.0,42h1.6v28.0h-1.6z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M46.6,42h4.2v28.0h-4.2z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M53.0,42h2.0v28.0h-2.0z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M57.0,42h3.4v28.0h-3.4z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M62.6,42h1.6v28.0h-1.6z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M66.4,42h2.6v28.0h-2.6z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M71.2,42h4.0v28.0h-4.0z" android:fillColor="#FFFFFF"/>
+      <path android:pathData="M77.4,42h2.0v28.0h-2.0z" android:fillColor="#FFFFFF"/>
     </group>
+
+    <!-- Carrinho -->
+    <path android:pathData="M34,42 L84,42 L77,70 L45,70 Z" android:strokeColor="#0F6B3F"
+        android:strokeWidth="6.5" android:strokeLineJoin="round"/>
+    <path android:pathData="M34,42 L84,42 L77,70 L45,70 Z" android:strokeColor="#FFC043"
+        android:strokeWidth="3.8" android:strokeLineJoin="round"/>
+
+    <path android:pathData="M18,28 L27,28 L34,42" android:strokeColor="#0F6B3F"
+        android:strokeWidth="6.5" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+    <path android:pathData="M18,28 L27,28 L34,42" android:strokeColor="#FFC043"
+        android:strokeWidth="3.8" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+
+    <path android:pathData="M48,70 L50,77 M75,70 L74,77" android:strokeColor="#FFC043"
+        android:strokeWidth="3.8" android:strokeLineCap="round"/>
+    <path android:pathData="M45.0,82.0a5,5 0 1 0 10,0a5,5 0 1 0 -10,0z" android:fillColor="#FFC043"/>
+    <path android:pathData="M69.0,82.0a5,5 0 1 0 10,0a5,5 0 1 0 -10,0z" android:fillColor="#FFC043"/>
+  </group>
 </vector>
