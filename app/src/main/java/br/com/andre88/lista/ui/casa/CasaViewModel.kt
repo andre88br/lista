@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.andre88.lista.data.ListaRepository
+import br.com.andre88.lista.data.auth.LoginGoogle
 import br.com.andre88.lista.data.sync.ResultadoSync
 import br.com.andre88.lista.data.sync.SyncRepositorio
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ data class CasaUiState(
 
 class CasaViewModel(
     private val sync: SyncRepositorio,
+    private val login: LoginGoogle,
     repositorio: ListaRepository,
 ) : ViewModel() {
 
@@ -38,22 +40,18 @@ class CasaViewModel(
         sync.configurarServidor(url, nomeDoAparelho)
     }
 
-    // O registro do aparelho acontece aqui dentro, sem passo separado: para quem
-    // usa o app, existe apenas "criar a casa" ou "entrar com o código".
     fun criarCasa(nome: String) = executar("Casa criada") {
-        runCatching {
-            sync.garantirRegistro(nomeDoAparelho)
-            sync.criarCasa(nome.ifBlank { "Minha casa" }).getOrThrow()
-            Unit
-        }
+        sync.criarCasa(nome.ifBlank { "Minha casa" }).map { }
     }
 
     fun entrar(codigo: String, juntarMeusItens: Boolean) = executar("Pronto, vocês estão na mesma casa") {
-        runCatching {
-            sync.garantirRegistro(nomeDoAparelho)
-            sync.entrarNaCasa(codigo, juntarMeusItens).getOrThrow()
-            Unit
-        }
+        sync.entrarNaCasa(codigo, juntarMeusItens).map { }
+    }
+
+    /** Encerra a sessao neste aparelho; o app volta para a tela de login. */
+    fun sairDaConta() = viewModelScope.launch {
+        login.esquecerConta()
+        sync.sair()
     }
 
     fun gerarNovoCodigo() = executar("Código novo gerado") { sync.gerarNovoCodigo().map { } }

@@ -181,7 +181,7 @@ class ListaRepository(
         if (eventoDao.existe(evento.id)) return@withTransaction false
         eventoDao.inserirSeNovo(evento.copy(sincronizado = true))
         val novo = ScanTransitions.aplicarDeltas(qtdsDe(evento.codigoBarras), evento.paraDeltas())
-        itemDao.salvar(ItemEntity.de(evento.codigoBarras, novo))
+        itemDao.salvar(ItemEntity.de(evento.codigoBarras, novo, autor = evento.autorNome))
         itemDao.limparZerados()
         true
     }
@@ -268,7 +268,8 @@ class ListaRepository(
         modo: String,
         novoEstado: ItemQtds,
     ): ScanEventoEntity {
-        itemDao.salvar(ItemEntity.de(codigoBarras, novoEstado))
+        val eu = preferencias.sincronizacao.value.usuario?.nome
+        itemDao.salvar(ItemEntity.de(codigoBarras, novoEstado, autor = eu))
         itemDao.limparZerados()
         val evento = ScanEventoEntity(
             id = UUID.randomUUID().toString(),
@@ -278,6 +279,7 @@ class ListaRepository(
             deltaLista = deltas.lista,
             deltaCarrinho = deltas.carrinho,
             autorId = preferencias.dispositivoId,
+            autorNome = eu,
             sincronizado = false,
         )
         eventoDao.inserirSeNovo(evento)

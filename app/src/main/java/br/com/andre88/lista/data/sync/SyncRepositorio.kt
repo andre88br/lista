@@ -5,6 +5,7 @@ import android.util.Log
 import br.com.andre88.lista.data.Casa
 import br.com.andre88.lista.data.ListaRepository
 import br.com.andre88.lista.data.Preferencias
+import br.com.andre88.lista.data.Usuario
 import br.com.andre88.lista.data.db.ItemEntity
 import br.com.andre88.lista.data.db.ProdutoEntity
 import br.com.andre88.lista.data.db.ScanEventoEntity
@@ -152,6 +153,7 @@ class SyncRepositorio(
                     timestamp = deIso(evento.criadoEm),
                     sincronizado = true,
                     autorId = evento.autorId,
+                    autorNome = evento.autorNome,
                 ),
             )
             if (novo) aplicados++
@@ -179,16 +181,37 @@ class SyncRepositorio(
     }
 
     /**
-     * Registra o aparelho no servidor, se ainda nao estiver. Acontece sozinho na
-     * primeira vez que a pessoa cria ou entra numa casa: o endereco ja vem no
-     * APK, entao nao ha nada para ela digitar ou entender.
+     * Troca o cracha do Google pela sessao deste aparelho. Se a pessoa ja
+     * participa de uma casa, ela vem junto: no celular novo nao ha codigo a
+     * digitar.
      */
-    suspend fun garantirRegistro(nomeDoAparelho: String) {
-        if (preferencias.token != null) return
+    suspend fun entrarComGoogle(idToken: String, nomeDoAparelho: String): Result<Usuario> = runCatching {
         val servidor = preferencias.servidorUrl
             ?: error("este APK foi gerado sem endereco de servidor")
-        val resposta = api.registrarDispositivo(servidor, nomeDoAparelho)
+
+        val resposta = api.entrarComGoogle(servidor, idToken, nomeDoAparelho)
         preferencias.definirDispositivo(resposta.dispositivoId, resposta.token)
+        val usuario = Usuario(
+            id = resposta.usuario.id,
+            nome = resposta.usuario.nome,
+            email = resposta.usuario.email,
+            fotoUrl = resposta.usuario.fotoUrl,
+        )
+        preferencias.definirUsuario(usuario)
+
+        resposta.casa?.let { casa ->
+            preferencias.definirCasa(casa.paraCasa())
+            SyncWorker.agendarPeriodico(contexto)
+            // Aparelho novo numa casa que ja existe: adota o que esta la.
+            adotarEstadoDaCasa(servidor, resposta.token)
+        }
+        usuario
+    }
+
+    /** Encerra a sessao neste aparelho. As listas locais continuam onde estao. */
+    fun sair() {
+        preferencias.sair()
+        SyncWorker.cancelarTudo(contexto)
     }
 
     /** Cria a casa e sobe o que ja existe neste celular. */
@@ -218,7 +241,16 @@ class SyncRepositorio(
             repositorio.limparParaAdotarCasa()
         }
 
-        // O instantaneo evita reproduzir o historico inteiro da casa.
+        adotarEstadoDaCasa(servidor, token)
+        sincronizar()
+        resposta.paraCasa()
+    }
+
+    /**
+     * Traz o estado completo da casa de uma vez, em vez de reproduzir o
+     * historico inteiro dela leitura por leitura.
+     */
+    private suspend fun adotarEstadoDaCasa(servidor: String, token: String) {
         val instantaneo = api.instantaneo(servidor, token)
         repositorio.aplicarInstantaneo(
             produtos = instantaneo.produtos.map {
@@ -232,14 +264,15 @@ class SyncRepositorio(
                 )
             },
             itens = instantaneo.itens.map {
-                ItemEntity.de(it.codigoBarras, ItemQtds(it.estoque, it.lista, it.carrinho))
+                ItemEntity.de(
+                    it.codigoBarras,
+                    ItemQtds(it.estoque, it.lista, it.carrinho),
+                    autor = it.ultimoAutorNome,
+                )
             },
         )
         preferencias.cursorSeq = instantaneo.seq
         preferencias.cursorProdutos = System.currentTimeMillis()
-
-        sincronizar()
-        resposta.paraCasa()
     }
 
     suspend fun gerarNovoCodigo(): Result<Casa> = runCatching {

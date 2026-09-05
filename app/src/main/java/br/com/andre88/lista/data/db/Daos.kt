@@ -90,7 +90,8 @@ interface ItemDao {
                    MAX(i.qtdEstoque, 0) AS qtdEstoque,
                    MAX(i.qtdLista, 0) AS qtdLista,
                    MAX(i.qtdCarrinho, 0) AS qtdCarrinho,
-                   i.atualizadoEm AS atualizadoEm
+                   i.atualizadoEm AS atualizadoEm,
+                   i.ultimoAutorNome AS ultimoAutorNome
             FROM item i INNER JOIN produto p ON p.codigoBarras = i.codigoBarras
         """
     }

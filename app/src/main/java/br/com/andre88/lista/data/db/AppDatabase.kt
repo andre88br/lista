@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProdutoEntity::class, ItemEntity::class, ScanEventoEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -71,9 +71,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v2 -> v3: guarda quem fez cada leitura, para as listas mostrarem de
+         * quem foi sem precisar consultar o servidor a cada exibicao.
+         */
+        val MIGRACAO_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE scan_evento ADD COLUMN autorNome TEXT")
+                db.execSQL("ALTER TABLE item ADD COLUMN ultimoAutorNome TEXT")
+            }
+        }
+
         fun criar(context: Context): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "lista.db")
-                .addMigrations(MIGRACAO_1_2)
+                .addMigrations(MIGRACAO_1_2, MIGRACAO_2_3)
                 .build()
     }
 }

@@ -4,9 +4,20 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class RespostaDispositivo(
-    @SerialName("dispositivoId") val dispositivoId: String,
+data class UsuarioApi(
+    val id: String,
+    val nome: String,
+    val email: String? = null,
+    val fotoUrl: String? = null,
+)
+
+@Serializable
+data class RespostaLogin(
     val token: String,
+    @SerialName("dispositivoId") val dispositivoId: String,
+    val usuario: UsuarioApi,
+    /** Vem preenchida quando a pessoa ja participa de uma casa: o celular novo entra direto. */
+    val casa: RespostaCasa? = null,
 )
 
 @Serializable
@@ -26,6 +37,7 @@ data class EventoApi(
     val deltaLista: Int = 0,
     val deltaCarrinho: Int = 0,
     val autorId: String? = null,
+    val autorNome: String? = null,
     val criadoEm: String? = null,
     val seq: Long = 0,
 )
@@ -46,6 +58,7 @@ data class ItemApi(
     val estoque: Int = 0,
     val lista: Int = 0,
     val carrinho: Int = 0,
+    val ultimoAutorNome: String? = null,
 )
 
 @Serializable

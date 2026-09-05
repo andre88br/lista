@@ -71,11 +71,17 @@ fun LinhaItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                item.marca?.takeIf { it.isNotBlank() }?.let { marca ->
+                val detalhe = listOfNotNull(
+                    item.marca?.takeIf { it.isNotBlank() },
+                    item.ultimoAutorNome?.takeIf { it.isNotBlank() }?.let { "por $it" },
+                ).joinToString(" · ")
+                if (detalhe.isNotEmpty()) {
                     Text(
-                        text = marca,
+                        text = detalhe,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

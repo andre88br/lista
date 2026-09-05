@@ -41,6 +41,11 @@ android {
         // que ele existe. Vem de gradle.properties para trocar sem editar codigo.
         val servidorPadrao = providers.gradleProperty("lista.servidorPadrao").getOrElse("")
         buildConfigField("String", "SERVIDOR_PADRAO", "\"$servidorPadrao\"")
+
+        // Client ID "Web" do Google Cloud. Nao e segredo: ele so identifica o
+        // aplicativo, e o mesmo valor precisa estar no servidor.
+        val clienteGoogle = providers.gradleProperty("lista.googleClientId").getOrElse("")
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"$clienteGoogle\"")
     }
 
     buildTypes {
@@ -120,6 +125,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.google.id)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

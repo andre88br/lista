@@ -7,6 +7,7 @@ import br.com.andre88.lista.AppContainer
 import br.com.andre88.lista.domain.Modo
 import br.com.andre88.lista.ui.casa.CasaViewModel
 import br.com.andre88.lista.ui.listas.ListasViewModel
+import br.com.andre88.lista.ui.login.LoginViewModel
 import br.com.andre88.lista.ui.scanner.ScannerViewModel
 
 fun fabricaListas(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
@@ -18,5 +19,9 @@ fun fabricaScanner(container: AppContainer, modo: Modo): ViewModelProvider.Facto
 }
 
 fun fabricaCasa(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-    initializer { CasaViewModel(container.sync, container.repositorio) }
+    initializer { CasaViewModel(container.sync, container.login, container.repositorio) }
+}
+
+fun fabricaLogin(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
+    initializer { LoginViewModel(container.login, container.sync) }
 }

@@ -26,11 +26,15 @@ class ApiCliente(
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val tipoJson = "application/json; charset=utf-8".toMediaType()
 
-    suspend fun registrarDispositivo(servidor: String, nome: String): RespostaDispositivo {
-        val corpo = buildJsonObject { put("nome", nome) }.toString()
+    /** Troca o crachá do Google pelo token deste aparelho. */
+    suspend fun entrarComGoogle(servidor: String, idToken: String, aparelho: String): RespostaLogin {
+        val corpo = buildJsonObject {
+            put("idToken", idToken)
+            put("aparelho", aparelho)
+        }.toString()
         return json.decodeFromString(
-            RespostaDispositivo.serializer(),
-            executar(servidor, "/v1/dispositivos", token = null, metodo = "POST", corpoJson = corpo),
+            RespostaLogin.serializer(),
+            executar(servidor, "/v1/auth/google", token = null, metodo = "POST", corpoJson = corpo),
         )
     }
 

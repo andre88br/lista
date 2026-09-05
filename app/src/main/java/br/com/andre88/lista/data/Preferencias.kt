@@ -14,10 +14,19 @@ data class Casa(
     val membros: Int = 1,
 )
 
-/** O que a tela de ajustes precisa saber sobre a sincronizacao. */
+/** Quem esta usando o app neste aparelho. */
+data class Usuario(
+    val id: String,
+    val nome: String,
+    val email: String? = null,
+    val fotoUrl: String? = null,
+)
+
+/** O que as telas precisam saber sobre login e sincronizacao. */
 data class EstadoSincronizacao(
     val servidorUrl: String? = null,
     val registrado: Boolean = false,
+    val usuario: Usuario? = null,
     val casa: Casa? = null,
     val ultimaSync: Long = 0,
     val ultimoErro: String? = null,
@@ -101,6 +110,29 @@ class Preferencias(context: Context) {
         atualizarEstado()
     }
 
+    fun definirUsuario(usuario: Usuario?) {
+        prefs.edit()
+            .putString(CHAVE_USUARIO_ID, usuario?.id)
+            .putString(CHAVE_USUARIO_NOME, usuario?.nome)
+            .putString(CHAVE_USUARIO_EMAIL, usuario?.email)
+            .putString(CHAVE_USUARIO_FOTO, usuario?.fotoUrl)
+            .apply()
+        atualizarEstado()
+    }
+
+    /** Encerra a sessao neste aparelho. As listas locais continuam onde estao. */
+    fun sair() {
+        prefs.edit()
+            .remove(CHAVE_TOKEN).remove(CHAVE_DISPOSITIVO)
+            .remove(CHAVE_USUARIO_ID).remove(CHAVE_USUARIO_NOME)
+            .remove(CHAVE_USUARIO_EMAIL).remove(CHAVE_USUARIO_FOTO)
+            .remove(CHAVE_CASA_ID).remove(CHAVE_CASA_NOME).remove(CHAVE_CASA_CODIGO)
+            .remove(CHAVE_CASA_MEMBROS).remove(CHAVE_CURSOR_SEQ).remove(CHAVE_CURSOR_PRODUTOS)
+            .remove(CHAVE_CURSOR_ENVIO).remove(CHAVE_ULTIMA_SYNC).remove(CHAVE_ULTIMO_ERRO)
+            .apply()
+        atualizarEstado()
+    }
+
     fun definirCasa(casa: Casa?) {
         prefs.edit()
             .putString(CHAVE_CASA_ID, casa?.id)
@@ -137,9 +169,18 @@ class Preferencias(context: Context) {
 
     private fun lerEstadoSincronizacao(): EstadoSincronizacao {
         val casaId = prefs.getString(CHAVE_CASA_ID, null)
+        val usuarioId = prefs.getString(CHAVE_USUARIO_ID, null)
         return EstadoSincronizacao(
             servidorUrl = servidorUrl,
             registrado = prefs.getString(CHAVE_TOKEN, null) != null,
+            usuario = usuarioId?.let {
+                Usuario(
+                    id = it,
+                    nome = prefs.getString(CHAVE_USUARIO_NOME, "").orEmpty(),
+                    email = prefs.getString(CHAVE_USUARIO_EMAIL, null),
+                    fotoUrl = prefs.getString(CHAVE_USUARIO_FOTO, null),
+                )
+            },
             casa = casaId?.let {
                 Casa(
                     id = it,
@@ -162,6 +203,10 @@ class Preferencias(context: Context) {
         private const val CHAVE_SERVIDOR = "servidor_url"
         private const val CHAVE_DISPOSITIVO = "dispositivo_id"
         private const val CHAVE_TOKEN = "dispositivo_token"
+        private const val CHAVE_USUARIO_ID = "usuario_id"
+        private const val CHAVE_USUARIO_NOME = "usuario_nome"
+        private const val CHAVE_USUARIO_EMAIL = "usuario_email"
+        private const val CHAVE_USUARIO_FOTO = "usuario_foto"
         private const val CHAVE_CASA_ID = "casa_id"
         private const val CHAVE_CASA_NOME = "casa_nome"
         private const val CHAVE_CASA_CODIGO = "casa_codigo"

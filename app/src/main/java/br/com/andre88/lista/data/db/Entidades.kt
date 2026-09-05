@@ -39,16 +39,24 @@ data class ItemEntity(
     @ColumnInfo(defaultValue = "0") val qtdLista: Int = 0,
     @ColumnInfo(defaultValue = "0") val qtdCarrinho: Int = 0,
     val atualizadoEm: Long = System.currentTimeMillis(),
+    /** Quem mexeu por ultimo neste produto, para as listas mostrarem de quem foi. */
+    val ultimoAutorNome: String? = null,
 ) {
     fun paraQtds(): ItemQtds = ItemQtds(estoque = qtdEstoque, lista = qtdLista, carrinho = qtdCarrinho)
 
     companion object {
-        fun de(codigoBarras: String, q: ItemQtds, agora: Long = System.currentTimeMillis()) = ItemEntity(
+        fun de(
+            codigoBarras: String,
+            q: ItemQtds,
+            agora: Long = System.currentTimeMillis(),
+            autor: String? = null,
+        ) = ItemEntity(
             codigoBarras = codigoBarras,
             qtdEstoque = q.estoque,
             qtdLista = q.lista,
             qtdCarrinho = q.carrinho,
             atualizadoEm = agora,
+            ultimoAutorNome = autor,
         )
     }
 }
@@ -76,6 +84,8 @@ data class ScanEventoEntity(
     @ColumnInfo(defaultValue = "0") val sincronizado: Boolean = false,
     /** Qual aparelho gerou a leitura (nulo quando o app roda sem sincronizacao). */
     val autorId: String? = null,
+    /** Nome de quem escaneou, para mostrar nas listas sem consultar o servidor. */
+    val autorNome: String? = null,
 ) {
     fun paraDeltas(): Deltas = Deltas(estoque = deltaEstoque, lista = deltaLista, carrinho = deltaCarrinho)
 
@@ -95,4 +105,5 @@ data class ItemComProduto(
     val qtdLista: Int,
     val qtdCarrinho: Int,
     val atualizadoEm: Long,
+    val ultimoAutorNome: String?,
 )

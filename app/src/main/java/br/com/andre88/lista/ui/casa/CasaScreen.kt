@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -43,6 +44,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.andre88.lista.AppContainer
 import br.com.andre88.lista.ui.fabricaCasa
+import coil.compose.AsyncImage
 import java.text.DateFormat
 import java.util.Date
 
@@ -66,6 +70,7 @@ fun CasaScreen(
     val pendentes by viewModel.pendentes.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val contexto = androidx.compose.ui.platform.LocalContext.current
+    var confirmandoSaidaDaConta by remember { mutableStateOf(false) }
 
     LaunchedEffect(ui.mensagem, ui.erro) {
         (ui.erro ?: ui.mensagem)?.let {
@@ -97,6 +102,32 @@ fun CasaScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (ui.ocupado) LinearProgressIndicator(Modifier.fillMaxWidth())
+
+            estado.usuario?.let { pessoa ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    pessoa.fotoUrl?.let { foto ->
+                        AsyncImage(
+                            model = foto,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(40.dp).clip(CircleShape),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(pessoa.nome, style = MaterialTheme.typography.titleSmall)
+                        pessoa.email?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    TextButton(onClick = { confirmandoSaidaDaConta = true }) { Text("Sair") }
+                }
+                HorizontalDivider()
+            }
 
             when {
                 estado.servidorUrl == null -> SemServidorNoApk()
@@ -137,6 +168,28 @@ fun CasaScreen(
                 )
             }
         }
+    }
+
+    if (confirmandoSaidaDaConta) {
+        AlertDialog(
+            onDismissRequest = { confirmandoSaidaDaConta = false },
+            title = { Text("Sair da conta?") },
+            text = {
+                Text(
+                    "Você volta para a tela de login. As listas deste celular continuam aqui, " +
+                        "e ao entrar de novo com a mesma conta a casa volta junto.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmandoSaidaDaConta = false
+                    viewModel.sairDaConta()
+                }) { Text("Sair") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmandoSaidaDaConta = false }) { Text("Cancelar") }
+            },
+        )
     }
 }
 
