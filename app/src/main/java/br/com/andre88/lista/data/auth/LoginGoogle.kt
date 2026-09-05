@@ -9,7 +9,7 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import br.com.andre88.lista.BuildConfig
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
@@ -38,13 +38,11 @@ class LoginGoogle(private val contextoDoApp: Context) {
             throw ErroDeLogin("Este APK foi gerado sem a configuração do Google.")
         }
 
-        val opcao = GetGoogleIdOption.Builder()
-            .setServerClientId(BuildConfig.GOOGLE_CLIENT_ID)
-            // false = mostra todas as contas do aparelho, inclusive na primeira vez.
-            .setFilterByAuthorizedAccounts(false)
-            .setAutoSelectEnabled(false)
-            .build()
-
+        // GetSignInWithGoogleOption e a opcao feita para um botao "Entrar com o
+        // Google": abre a escolha de conta sempre. A GetGoogleIdOption e para o
+        // login automatico, e quando nao ha conta previamente autorizada ela
+        // pode simplesmente nao mostrar nada - que era o que acontecia aqui.
+        val opcao = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_CLIENT_ID).build()
         val pedido = GetCredentialRequest.Builder().addCredentialOption(opcao).build()
         val resposta = try {
             // Rede de seguranca: se o Google nunca responder, a tela nao pode
@@ -103,7 +101,8 @@ class LoginGoogle(private val contextoDoApp: Context) {
 
     private companion object {
         const val TAG = "LoginGoogle"
-        // Generoso de proposito: a pessoa pode precisar adicionar uma conta no meio.
-        const val TEMPO_LIMITE_MS = 3 * 60 * 1000L
+        // Tempo suficiente para escolher a conta, mas curto o bastante para a
+        // falha aparecer rapido quando a tela do Google nao chega a abrir.
+        const val TEMPO_LIMITE_MS = 90 * 1000L
     }
 }
