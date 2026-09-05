@@ -4,7 +4,13 @@ Pré-requisitos: o [VPS criado](01-criar-vps-oracle.md) e o [subdomínio do Duck
 
 ## 3.1 Baixar e instalar
 
-Conectado ao VPS por SSH:
+**Antes de tudo: entre no VPS.** O Cloud Shell é o terminal do painel da Oracle, não o servidor — instalar lá não funciona (e o instalador agora recusa, para não confundir). Você sabe que chegou no lugar certo quando o começo da linha virar `ubuntu@instance-...`:
+
+```bash
+ssh -i ~/.ssh/SUA-CHAVE ubuntu@IP_DO_SEU_VPS
+```
+
+Já dentro do servidor:
 
 ```bash
 sudo apt update && sudo apt install -y git

@@ -11,13 +11,28 @@ titulo()   { printf '\n\033[1m== %s ==\033[0m\n' "$*"; }
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$AQUI"
 
+# O engano mais facil de cometer: rodar isto no Cloud Shell da Oracle, que e um
+# terminal de administracao, e nao o servidor. La o sudo nem funciona.
+if [ "$(hostname)" = "cloudshell" ] || [ -n "${OCI_CS_HOME:-}" ] || [ -n "${OCI_CS_USER_OCID:-}" ]; then
+  vermelho "Voce esta no Oracle Cloud Shell, nao no servidor."
+  echo
+  echo "O Cloud Shell e o terminal do painel da Oracle; o servidor e a maquina (VPS)."
+  echo "Entre nela primeiro e rode o instalador la:"
+  echo
+  echo "  ssh -i ~/.ssh/SUA-CHAVE ubuntu@IP_DO_SEU_VPS"
+  echo "  cd ~/lista && git pull && cd servidor && ./instalar.sh"
+  echo
+  echo "Voce sabe que chegou quando o inicio da linha virar ubuntu@instance-..."
+  exit 1
+fi
+
 if [ "$(id -u)" -eq 0 ]; then
   SUDO=""
-elif command -v sudo >/dev/null 2>&1; then
+elif command -v sudo >/dev/null 2>&1 && sudo true 2>/dev/null; then
   SUDO="sudo"
 else
-  vermelho "Este usuario nao e root e o comando sudo nao existe nesta maquina."
-  echo "Entre como root (sudo su -) ou instale o sudo, e rode o script de novo."
+  vermelho "Preciso de sudo funcionando, e nesta maquina ele nao esta."
+  echo "Entre como root (sudo su -) ou rode o instalador no VPS, onde o sudo funciona."
   exit 1
 fi
 
