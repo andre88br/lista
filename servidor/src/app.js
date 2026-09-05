@@ -1,14 +1,20 @@
 import express from 'express';
 import { autenticar, exigirCasa } from './auth.js';
 import { criarAvisador } from './stream.js';
+import { criarVerificadorGoogle } from './google.js';
+import { rotasDeAuth } from './rotas/auth.js';
 import { rotasDeCasas } from './rotas/casas.js';
-import { rotasDeDispositivos } from './rotas/dispositivos.js';
 import { rotasDeSync } from './rotas/sync.js';
 import { ErroDeEntrada } from './validacao.js';
 
-export function criarApp(pool) {
+/**
+ * @param opcoes.verificarGoogle troca a checagem do token do Google. So os
+ *        testes usam: em producao vale a verificacao real contra o Google.
+ */
+export function criarApp(pool, opcoes = {}) {
   const app = express();
   const avisador = criarAvisador();
+  const verificarGoogle = opcoes.verificarGoogle ?? criarVerificadorGoogle(process.env.GOOGLE_CLIENT_ID);
 
   // Atras do Caddy: sem isso, o limitador enxergaria todo mundo como o mesmo IP.
   app.set('trust proxy', 1);
@@ -47,7 +53,7 @@ export function criarApp(pool) {
 </html>`);
   });
 
-  app.use('/v1/dispositivos', rotasDeDispositivos(pool));
+  app.use('/v1/auth', rotasDeAuth(pool, verificarGoogle));
 
   // Daqui para baixo, tudo exige o token do aparelho.
   app.use('/v1', autenticar(pool));

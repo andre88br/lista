@@ -4,13 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Servidor de sincronizacao do app Lista & Estoque",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test --test-concurrency=1 test/*.test.js"
   },
   "dependencies": {
     "express": "^5.2.1",
+    "google-auth-library": "^11.0.2",
     "pg": "^8.23.0"
   }
 }

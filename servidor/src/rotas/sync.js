@@ -18,7 +18,8 @@ function eventoParaJson(linha) {
     deltaEstoque: linha.delta_estoque,
     deltaLista: linha.delta_lista,
     deltaCarrinho: linha.delta_carrinho,
-    autorId: linha.autor_id,
+    autorId: linha.autor_usuario_id,
+    autorNome: linha.autor_nome ?? null,
     criadoEm: linha.criado_em,
     seq: Number(linha.seq),
   };
@@ -67,13 +68,14 @@ export function rotasDeSync(pool, avisador) {
         // O id vem do celular, entao reenviar o mesmo evento nao conta duas vezes.
         const { rowCount } = await cliente.query(
           `INSERT INTO eventos
-             (id, casa_id, codigo_barras, modo, delta_estoque, delta_lista, delta_carrinho, autor_id, criado_em)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             (id, casa_id, codigo_barras, modo, delta_estoque, delta_lista, delta_carrinho,
+              autor_id, autor_usuario_id, criado_em)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            ON CONFLICT (id) DO NOTHING`,
           [
             evento.id, casaId, evento.codigoBarras, evento.modo,
             evento.deltaEstoque, evento.deltaLista, evento.deltaCarrinho,
-            req.dispositivo.id, evento.criadoEm,
+            req.dispositivo.id, req.dispositivo.usuarioId, evento.criadoEm,
           ],
         );
         eventosAceitos += rowCount;
@@ -118,10 +120,12 @@ export function rotasDeSync(pool, avisador) {
       produtosDesde && !Number.isNaN(produtosDesde.getTime()) ? produtosDesde : new Date(0);
 
     const eventos = await pool.query(
-      `SELECT * FROM eventos
-        WHERE casa_id = $1
-          AND (seq > $2 OR recebido_em > now() - interval '${JANELA_SOBREPOSICAO}')
-        ORDER BY seq
+      `SELECT e.*, u.nome AS autor_nome
+         FROM eventos e
+         LEFT JOIN usuarios u ON u.id = e.autor_usuario_id
+        WHERE e.casa_id = $1
+          AND (e.seq > $2 OR e.recebido_em > now() - interval '${JANELA_SOBREPOSICAO}')
+        ORDER BY e.seq
         LIMIT ${LIMITE_PAGINA}`,
       [casaId, desde],
     );
@@ -158,6 +162,15 @@ export function rotasDeSync(pool, avisador) {
       [casaId],
     );
     const produtos = await pool.query('SELECT * FROM produtos WHERE casa_id = $1', [casaId]);
+    const autores = await pool.query(
+      `SELECT DISTINCT ON (e.codigo_barras) e.codigo_barras, u.nome AS autor_nome
+         FROM eventos e
+         LEFT JOIN usuarios u ON u.id = e.autor_usuario_id
+        WHERE e.casa_id = $1
+        ORDER BY e.codigo_barras, e.seq DESC`,
+      [casaId],
+    );
+    const nomePorCodigo = new Map(autores.rows.map((l) => [l.codigo_barras, l.autor_nome]));
     const seq = await pool.query(
       'SELECT COALESCE(MAX(seq), 0) AS seq FROM eventos WHERE casa_id = $1',
       [casaId],
@@ -173,6 +186,7 @@ export function rotasDeSync(pool, avisador) {
         estoque: l.estoque,
         lista: l.lista,
         carrinho: l.carrinho,
+        ultimoAutorNome: nomePorCodigo.get(l.codigo_barras) ?? null,
       })),
     });
   });

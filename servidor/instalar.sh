@@ -73,6 +73,20 @@ if [ -f .env ]; then
   verde "Arquivo .env ja existe; mantendo o que esta la."
   # shellcheck disable=SC1091
   . ./.env
+
+  # Instalacoes feitas antes do login com Google nao tem esta linha.
+  if ! grep -q '^GOOGLE_CLIENT_ID=' .env; then
+    if [ -z "${GOOGLE_CLIENT_ID:-}" ] && [ -t 0 ]; then
+      echo "Falta o Client ID do Google (o do tipo Web, no Google Cloud)."
+      read -rp "Client ID (Enter para deixar o login desligado): " GOOGLE_CLIENT_ID
+    fi
+    echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}" >> .env
+    if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
+      verde "Client ID do Google gravado."
+    else
+      amarelo "Sem Client ID: o servidor sobe, mas recusa login ate voce preencher no .env."
+    fi
+  fi
 else
   # Tudo pode vir por variavel de ambiente, para rodar sem terminal interativo:
   #   DOMINIO=xxx.duckdns.org DUCKDNS_TOKEN=yyy ./instalar.sh
@@ -93,10 +107,15 @@ else
   POSTGRES_PASSWORD="$(openssl rand -base64 48 | tr -d '/+=' | cut -c1-32 || true)"
   [ -n "$POSTGRES_PASSWORD" ] || POSTGRES_PASSWORD="$(date +%s%N | sha256sum | cut -c1-32)"
 
+  if [ -z "${GOOGLE_CLIENT_ID:-}" ] && [ -t 0 ]; then
+    read -rp "Client ID do Google, tipo Web (Enter para pular): " GOOGLE_CLIENT_ID
+  fi
+
   cat > .env <<EOF
 DOMINIO=$DOMINIO
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-}
+GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
 EOF
   # COMPOSE_FILE no .env faz todo "docker compose" seguinte usar os mesmos
   # arquivos, inclusive quando voce rodar na mao depois.

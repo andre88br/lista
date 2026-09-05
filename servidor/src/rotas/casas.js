@@ -31,7 +31,7 @@ export function rotasDeCasas(pool) {
   rotas.post('/', async (req, res) => {
     if (req.dispositivo.casaId) {
       return res.status(409).json({
-        erro: 'este aparelho ja esta em uma casa; saia dela antes de criar outra',
+        erro: 'voce ja esta em uma casa; saia dela antes de criar outra',
         casa: await dadosDaCasa(pool, req.dispositivo.casaId),
       });
     }
@@ -47,8 +47,8 @@ export function rotasDeCasas(pool) {
             [nome, codigo],
           );
           await cliente.query(
-            'INSERT INTO membros (casa_id, dispositivo_id) VALUES ($1, $2)',
-            [rows[0].id, req.dispositivo.id],
+            'INSERT INTO membros (casa_id, usuario_id) VALUES ($1, $2)',
+            [rows[0].id, req.dispositivo.usuarioId],
           );
           return rows[0].id;
         } catch (erro) {
@@ -74,13 +74,13 @@ export function rotasDeCasas(pool) {
 
     const casaId = rows[0].id;
     if (req.dispositivo.casaId && req.dispositivo.casaId !== casaId) {
-      return res.status(409).json({ erro: 'este aparelho ja esta em outra casa; saia dela primeiro' });
+      return res.status(409).json({ erro: 'voce ja esta em outra casa; saia dela primeiro' });
     }
 
     await pool.query(
-      `INSERT INTO membros (casa_id, dispositivo_id) VALUES ($1, $2)
-       ON CONFLICT (casa_id, dispositivo_id) DO NOTHING`,
-      [casaId, req.dispositivo.id],
+      `INSERT INTO membros (casa_id, usuario_id) VALUES ($1, $2)
+       ON CONFLICT (casa_id, usuario_id) DO NOTHING`,
+      [casaId, req.dispositivo.usuarioId],
     );
 
     res.json(await dadosDaCasa(pool, casaId));
@@ -108,7 +108,7 @@ export function rotasDeCasas(pool) {
 
   // Sair da casa nao apaga os dados dela: os outros membros continuam com tudo.
   rotas.delete('/atual', exigirCasa, async (req, res) => {
-    await pool.query('DELETE FROM membros WHERE dispositivo_id = $1', [req.dispositivo.id]);
+    await pool.query('DELETE FROM membros WHERE usuario_id = $1', [req.dispositivo.usuarioId]);
     res.json({ ok: true });
   });
 

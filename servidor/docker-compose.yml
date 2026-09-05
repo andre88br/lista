@@ -23,6 +23,9 @@ services:
     environment:
       DATABASE_URL: postgres://lista:${POSTGRES_PASSWORD}@banco:5432/lista
       PORT: 8080
+      # Client ID do tipo "Web" no Google Cloud. E contra ele que o servidor
+      # confere que o login veio deste aplicativo, e nao de outro qualquer.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     expose:
       - "8080"
 
