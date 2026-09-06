@@ -70,6 +70,11 @@ class ApiCliente(
         executar(servidor, "/v1/casas/atual", token, "DELETE", null)
     }
 
+    /** Apaga a conta no servidor. O que a casa tem continua com quem fica. */
+    suspend fun excluirConta(servidor: String, token: String) {
+        executar(servidor, "/v1/auth/eu", token, "DELETE", null)
+    }
+
     suspend fun enviar(servidor: String, token: String, envio: EnvioSync): RespostaEnvio {
         val corpo = json.encodeToString(EnvioSync.serializer(), envio)
         return json.decodeFromString(

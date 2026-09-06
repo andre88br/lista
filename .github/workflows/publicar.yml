@@ -1,0 +1,73 @@
+name: Pacote para a Play Store
+
+# Gera o AAB assinado para enviar ao Play Console. Fica separado do CI de todo
+# dia porque publicar é um ato deliberado, não algo que acontece a cada push.
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: 'Nome da versão que aparece na loja (ex.: 1.0.3)'
+        required: true
+        default: '1.0'
+
+jobs:
+  pacote:
+    name: Gerar AAB assinado
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Permissao do wrapper
+        run: chmod +x gradlew
+
+      - name: Preparar a chave de assinatura
+        env:
+          SENHA: ${{ secrets.LISTA_KEYSTORE_SENHA }}
+        run: |
+          if [ -z "$SENHA" ]; then
+            echo "::error::Sem o segredo LISTA_KEYSTORE_SENHA não dá para assinar o pacote."
+            exit 1
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 \
+            -in app/chave/chave-lista.jks.enc \
+            -out app/chave/chave-lista.jks \
+            -pass "pass:$SENHA"
+
+      # O número da execução vira o versionCode: sempre cresce, nunca repete,
+      # que é o que a Play exige de um envio para o outro.
+      - name: Gerar o AAB
+        env:
+          LISTA_KEYSTORE_SENHA: ${{ secrets.LISTA_KEYSTORE_SENHA }}
+        run: |
+          ./gradlew bundleRelease --stacktrace \
+            -Plista.versionCode=${{ github.run_number }} \
+            -Plista.versionName='${{ inputs.versionName }}'
+
+      - name: Conferir a assinatura do pacote
+        env:
+          SENHA: ${{ secrets.LISTA_KEYSTORE_SENHA }}
+        run: |
+          echo "Assinado com a chave de envio:"
+          keytool -list -v -keystore app/chave/chave-lista.jks -storepass "$SENHA" | grep -m1 "SHA1:"
+          echo
+          echo "LEMBRETE: a Play reassina o app com a chave dela. O SHA-1 que o"
+          echo "login com Google precisa reconhecer é o de 'Assinatura do app'"
+          echo "no Play Console, não este. Veja docs/05-play-store.md."
+
+      - name: Publicar o pacote
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab-para-a-play
+          path: app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error

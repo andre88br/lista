@@ -33,8 +33,11 @@ android {
         applicationId = "br.com.andre88.lista"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // A Play exige um versionCode maior a cada envio. No CI ele vem do numero
+        // da execucao, entao nunca repete; localmente fica 1, que basta para
+        // gerar APK de teste.
+        versionCode = providers.gradleProperty("lista.versionCode").map(String::toInt).getOrElse(1)
+        versionName = providers.gradleProperty("lista.versionName").getOrElse("1.0")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Endereco do servidor ja embutido: quem instala o app nao precisa saber
@@ -56,6 +59,11 @@ android {
             assinaturaFixa?.let { signingConfig = it }
         }
         release {
+            // Minificacao desligada de proposito: ML Kit, Room e Compose exigem
+            // regras de manutencao que, se ficarem incompletas, quebram so em
+            // producao. O app tem 31 MB por causa do modelo de leitura embutido;
+            // ligar o R8 economizaria alguns MB em troca de um risco que nao
+            // compensa agora.
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             assinaturaFixa?.let { signingConfig = it }

@@ -71,6 +71,7 @@ fun CasaScreen(
     val snackbar = remember { SnackbarHostState() }
     val contexto = androidx.compose.ui.platform.LocalContext.current
     var confirmandoSaidaDaConta by remember { mutableStateOf(false) }
+    var confirmandoExclusao by remember { mutableStateOf(false) }
 
     LaunchedEffect(ui.mensagem, ui.erro) {
         (ui.erro ?: ui.mensagem)?.let {
@@ -168,6 +169,37 @@ fun CasaScreen(
                 )
             }
         }
+    }
+
+    if (estado.registrado) {
+        // Exigido pela Play para apps com conta, e o certo a existir de todo jeito.
+        TextButton(onClick = { confirmandoExclusao = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("Excluir minha conta", color = MaterialTheme.colorScheme.error)
+        }
+    }
+
+    if (confirmandoExclusao) {
+        AlertDialog(
+            onDismissRequest = { confirmandoExclusao = false },
+            title = { Text("Excluir a conta?") },
+            text = {
+                Text(
+                    "Apaga sua identificação no servidor, suas sessões e sua participação na " +
+                        "casa, e limpa as listas deste celular. Não tem volta.\n\n" +
+                        "Os produtos e o histórico continuam com quem ficar na casa: eles são da " +
+                        "casa, e apagá-los sumiria com o estoque da outra pessoa.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmandoExclusao = false
+                    viewModel.excluirConta()
+                }) { Text("Excluir", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmandoExclusao = false }) { Text("Cancelar") }
+            },
+        )
     }
 
     if (confirmandoSaidaDaConta) {

@@ -274,3 +274,36 @@ test('a leitura guarda quem escaneou', async () => {
   const instantaneo = await chamar('GET', '/v1/sync/instantaneo', { token: tokenA });
   assert.equal(instantaneo.corpo.itens.find((i) => i.codigoBarras === 'leite').ultimoAutorNome, 'Clara');
 });
+
+test('a pagina de privacidade responde, porque a ficha da loja aponta para ela', async () => {
+  const resposta = await fetch(`${base}/privacidade`);
+  assert.equal(resposta.status, 200);
+  assert.match(await resposta.text(), /Política de privacidade/);
+});
+
+test('excluir a conta apaga a pessoa mas preserva o que a casa tem', async () => {
+  const tokenA = await entrarComGoogle(chamar, 'sai|Quem Sai');
+  const tokenB = await entrarComGoogle(chamar, 'fica|Quem Fica');
+  const casa = await chamar('POST', '/v1/casas', { token: tokenB, corpo: { nome: 'Casa 11' } });
+  await chamar('POST', '/v1/casas/entrar', { token: tokenA, corpo: { codigo: casa.corpo.codigo } });
+  await chamar('POST', '/v1/sync', {
+    token: tokenA,
+    corpo: {
+      eventos: [evento('arroz', { lista: 1 })],
+      produtos: [{ codigoBarras: 'arroz', nome: 'Arroz', atualizadoEm: new Date().toISOString() }],
+    },
+  });
+
+  const exclusao = await chamar('DELETE', '/v1/auth/eu', { token: tokenA });
+  assert.equal(exclusao.status, 200);
+
+  // A sessao morre junto com a conta.
+  const depois = await chamar('GET', '/v1/casas/atual', { token: tokenA });
+  assert.equal(depois.status, 401);
+
+  // Quem ficou continua com o item; some apenas o vinculo com quem saiu.
+  const instantaneo = await chamar('GET', '/v1/sync/instantaneo', { token: tokenB });
+  const arroz = instantaneo.corpo.itens.find((i) => i.codigoBarras === 'arroz');
+  assert.equal(arroz.lista, 1, 'o item pertence à casa, não a quem saiu');
+  assert.equal(arroz.ultimoAutorNome, null, 'sem vínculo com a pessoa excluída');
+});

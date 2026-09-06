@@ -213,6 +213,19 @@ class SyncRepositorio(
         usuario
     }
 
+    /**
+     * Apaga a conta no servidor e limpa este aparelho. Os produtos e o historico
+     * ficam com quem continua na casa: sao dela, e apagar sumiria com o estoque
+     * de outra pessoa.
+     */
+    suspend fun excluirConta(): Result<Unit> = runCatching {
+        val (servidor, token) = exigirConfigurado()
+        api.excluirConta(servidor, token)
+        repositorio.limparParaAdotarCasa()
+        preferencias.sair()
+        SyncWorker.cancelarTudo(contexto)
+    }
+
     /** Encerra a sessao neste aparelho. As listas locais continuam onde estao. */
     fun sair() {
         preferencias.sair()

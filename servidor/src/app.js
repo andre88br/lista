@@ -5,6 +5,7 @@ import { criarVerificadorGoogle } from './google.js';
 import { rotasDeAuth } from './rotas/auth.js';
 import { rotasDeCasas } from './rotas/casas.js';
 import { rotasDeSync } from './rotas/sync.js';
+import { paginaDePrivacidade } from './privacidade.js';
 import { ErroDeEntrada } from './validacao.js';
 
 /**
@@ -54,6 +55,12 @@ export function criarApp(pool, opcoes = {}) {
   });
 
   app.use('/v1/auth', rotasDeAuth(pool, verificarGoogle));
+
+  // A ficha da loja precisa de um endereco publico de politica de privacidade,
+  // e o proprio servidor e o lugar natural para hospedar.
+  app.get('/privacidade', (_req, res) => {
+    res.type('html').send(paginaDePrivacidade());
+  });
 
   // Daqui para baixo, tudo exige o token do aparelho.
   app.use('/v1', autenticar(pool));

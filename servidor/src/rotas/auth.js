@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { emTransacao } from '../db.js';
 import { gerarToken, hashDoToken } from '../codigo.js';
+import { autenticar } from '../auth.js';
 import { criarLimitador } from '../limite.js';
 import { texto } from '../validacao.js';
 
@@ -76,6 +77,22 @@ export function rotasDeAuth(pool, verificarGoogle) {
           }
         : null,
     });
+  });
+
+  // A Play exige um caminho de exclusao de conta, e e o certo a ter de qualquer
+  // forma. Apaga a pessoa, os aparelhos dela e a participacao na casa; o que ela
+  // ja escaneou continua na casa, porque pertence a casa e nao a ela - apagar
+  // sumiria com itens do estoque de quem ficou.
+  rotas.delete('/eu', autenticar(pool), async (req, res) => {
+    await emTransacao(pool, async (cliente) => {
+      await cliente.query('UPDATE eventos SET autor_usuario_id = NULL WHERE autor_usuario_id = $1', [
+        req.dispositivo.usuarioId,
+      ]);
+      await cliente.query('DELETE FROM membros WHERE usuario_id = $1', [req.dispositivo.usuarioId]);
+      await cliente.query('DELETE FROM dispositivos WHERE usuario_id = $1', [req.dispositivo.usuarioId]);
+      await cliente.query('DELETE FROM usuarios WHERE id = $1', [req.dispositivo.usuarioId]);
+    });
+    res.json({ ok: true });
   });
 
   return rotas;

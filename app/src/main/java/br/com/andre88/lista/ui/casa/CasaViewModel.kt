@@ -51,6 +51,14 @@ class CasaViewModel(
         sync.sair()
     }
 
+    /** Apaga a conta no servidor e as listas deste aparelho. Nao tem volta. */
+    fun excluirConta() = viewModelScope.launch {
+        _ui.value = CasaUiState(ocupado = true)
+        sync.excluirConta()
+            .onSuccess { login.esquecerConta() }
+            .onFailure { _ui.value = CasaUiState(erro = it.message ?: "não consegui excluir") }
+    }
+
     fun gerarNovoCodigo() = executar("Código novo gerado") { sync.gerarNovoCodigo().map { } }
 
     fun sair() = executar("Você saiu da casa") { sync.sairDaCasa() }
