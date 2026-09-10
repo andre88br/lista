@@ -42,6 +42,8 @@ A partir daí: ela marca o café como "acabou", aparece na sua lista; você comp
 
 **Continua funcionando sem sinal.** Dentro do mercado, com o celular sem internet, você escaneia normalmente — as leituras sobem sozinhas quando a conexão volta. E se os dois escanearem o mesmo produto offline ao mesmo tempo, os dois chegam ao mesmo número, porque cada leitura viaja como uma variação (`+1 na lista`) e não como um valor absoluto que sobrescreve o do outro.
 
+Login com Google, publicação na Play Store e notificação push instantânea (opcional) têm seus próprios guias: **[docs/04-login-google.md](docs/04-login-google.md)**, **[docs/05-play-store.md](docs/05-play-store.md)**, **[docs/06-notificacao-push.md](docs/06-notificacao-push.md)**.
+
 ## Como instalar o APK
 
 Não é preciso ter o Android Studio.

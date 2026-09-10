@@ -102,6 +102,12 @@ class ApiCliente(
             executar(servidor, "/v1/sync/instantaneo", token, "GET", null),
         )
 
+    /** Guarda o token do FCM deste aparelho, para o servidor poder avisar por push. */
+    suspend fun registrarTokenFcm(servidor: String, token: String, tokenFcm: String) {
+        val corpo = buildJsonObject { put("token", tokenFcm) }.toString()
+        executar(servidor, "/v1/notificacoes/token", token, "PUT", corpo)
+    }
+
     /** Usado pela tela de ajustes para dizer se o endereco digitado responde. */
     suspend fun servidorResponde(servidor: String): Boolean = withContext(Dispatchers.IO) {
         runCatching {
@@ -122,6 +128,7 @@ class ApiCliente(
         when (metodo) {
             "GET" -> construtor.get()
             "DELETE" -> construtor.delete()
+            "PUT" -> construtor.put((corpoJson ?: "{}").toRequestBody(tipoJson))
             else -> construtor.post((corpoJson ?: "{}").toRequestBody(tipoJson))
         }
 

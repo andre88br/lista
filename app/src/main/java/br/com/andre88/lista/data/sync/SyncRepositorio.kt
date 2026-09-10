@@ -226,6 +226,14 @@ class SyncRepositorio(
         SyncWorker.cancelarTudo(contexto)
     }
 
+    /** Manda o token do FCM para o servidor guardar. Sem sessao, nao faz nada. */
+    suspend fun registrarTokenFcm(tokenFcm: String) {
+        val servidor = preferencias.servidorUrl ?: return
+        val token = preferencias.token ?: return
+        runCatching { api.registrarTokenFcm(servidor, token, tokenFcm) }
+            .onFailure { Log.d(TAG, "nao deu para registrar o token de push: ${it.message}") }
+    }
+
     /** Encerra a sessao neste aparelho. As listas locais continuam onde estao. */
     fun sair() {
         preferencias.sair()

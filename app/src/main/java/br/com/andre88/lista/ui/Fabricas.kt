@@ -23,5 +23,5 @@ fun fabricaCasa(container: AppContainer): ViewModelProvider.Factory = viewModelF
 }
 
 fun fabricaLogin(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-    initializer { LoginViewModel(container.login, container.sync) }
+    initializer { LoginViewModel(container.login, container.sync, container.firebasePush) }
 }

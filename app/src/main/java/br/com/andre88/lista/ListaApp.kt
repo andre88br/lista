@@ -11,9 +11,16 @@ class ListaApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
-        // So agenda se a sincronizacao estiver configurada; sem casa, o app e 100% local.
+
+        // Inicializa sempre (nao so quando ha sessao): quando o sistema acorda o
+        // processo so para entregar uma notificacao push, e o onCreate que roda
+        // primeiro, antes do FirebaseMessagingService precisar do Firebase pronto.
+        container.firebasePush.inicializar()
+
+        // So agenda/registra se a sincronizacao estiver configurada; sem casa, o app e 100% local.
         if (container.preferencias.sincronizacao.value.ativa) {
             SyncWorker.agendarPeriodico(this)
+            container.firebasePush.registrarToken(container.sync)
         }
     }
 }

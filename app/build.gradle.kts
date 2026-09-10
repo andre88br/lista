@@ -49,6 +49,26 @@ android {
         // aplicativo, e o mesmo valor precisa estar no servidor.
         val clienteGoogle = providers.gradleProperty("lista.googleClientId").getOrElse("")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"$clienteGoogle\"")
+
+        // Config do Firebase (notificacao push), sem o plugin google-services:
+        // sao 4 valores publicos do app Android no Firebase, nao um segredo.
+        // Vazios por padrao — sem eles, a notificacao so fica desligada.
+        buildConfigField(
+            "String", "FIREBASE_API_KEY",
+            "\"${providers.gradleProperty("lista.firebaseApiKey").getOrElse("")}\"",
+        )
+        buildConfigField(
+            "String", "FIREBASE_APP_ID",
+            "\"${providers.gradleProperty("lista.firebaseAppId").getOrElse("")}\"",
+        )
+        buildConfigField(
+            "String", "FIREBASE_PROJECT_ID",
+            "\"${providers.gradleProperty("lista.firebaseProjectId").getOrElse("")}\"",
+        )
+        buildConfigField(
+            "String", "FIREBASE_SENDER_ID",
+            "\"${providers.gradleProperty("lista.firebaseSenderId").getOrElse("")}\"",
+        )
     }
 
     buildTypes {
@@ -136,6 +156,9 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.google.id)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging.ktx)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

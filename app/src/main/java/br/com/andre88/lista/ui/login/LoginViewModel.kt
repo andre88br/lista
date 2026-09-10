@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.andre88.lista.data.auth.ErroDeLogin
 import br.com.andre88.lista.data.auth.LoginGoogle
+import br.com.andre88.lista.data.push.FirebasePush
 import br.com.andre88.lista.data.sync.SyncRepositorio
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ data class LoginUiState(
 class LoginViewModel(
     private val login: LoginGoogle,
     private val sync: SyncRepositorio,
+    private val firebasePush: FirebasePush,
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(LoginUiState())
@@ -40,7 +42,10 @@ class LoginViewModel(
         try {
             val idToken = login.pedirIdToken(contextoDaTela)
             sync.entrarComGoogle(idToken, nomeDoAparelho)
-                .onSuccess { _ui.value = LoginUiState() }
+                .onSuccess {
+                    _ui.value = LoginUiState()
+                    firebasePush.registrarToken(sync, viewModelScope)
+                }
                 .onFailure { _ui.value = LoginUiState(erro = mensagemDe(it)) }
         } catch (erro: ErroDeLogin) {
             // Cancelar nao e erro: a pessoa so mudou de ideia.

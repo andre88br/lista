@@ -5,6 +5,7 @@ import br.com.andre88.lista.data.ListaRepository
 import br.com.andre88.lista.data.Preferencias
 import br.com.andre88.lista.data.auth.LoginGoogle
 import br.com.andre88.lista.data.db.AppDatabase
+import br.com.andre88.lista.data.push.FirebasePush
 import br.com.andre88.lista.data.remote.OpenFoodFactsClient
 import br.com.andre88.lista.data.sync.ApiCliente
 import br.com.andre88.lista.data.sync.SyncRepositorio
@@ -29,4 +30,6 @@ class AppContainer(private val context: Context) {
     val sync: SyncRepositorio by lazy {
         SyncRepositorio(contexto = context.applicationContext, api = api, repositorio = repositorio, preferencias = preferencias)
     }
+
+    val firebasePush: FirebasePush by lazy { FirebasePush(context.applicationContext) }
 }

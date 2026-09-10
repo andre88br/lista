@@ -1,6 +1,11 @@
 package br.com.andre88.lista.ui.casa
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.andre88.lista.AppContainer
@@ -80,6 +86,17 @@ fun CasaScreen(
         }
     }
     LaunchedEffect(Unit) { if (estado.ativa) viewModel.atualizarCasa() }
+
+    // A notificacao so avisa quem compartilha a casa; sem sincronizacao ativa,
+    // ou sem o Firebase configurado neste APK, nem faz sentido pedir a permissao.
+    val lancadorNotificacao = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(estado.ativa) {
+        if (!estado.ativa || !container.firebasePush.configurado) return@LaunchedEffect
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@LaunchedEffect
+        val concedida = ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!concedida) lancadorNotificacao.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     Scaffold(
         topBar = {
