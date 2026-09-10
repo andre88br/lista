@@ -26,6 +26,9 @@ services:
       # Client ID do tipo "Web" no Google Cloud. E contra ele que o servidor
       # confere que o login veio deste aplicativo, e nao de outro qualquer.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      # Credencial de conta de servico do Firebase (JSON numa linha so, via
+      # jq -c). Sem ela, a notificacao push so fica desligada.
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
     expose:
       - "8080"
 

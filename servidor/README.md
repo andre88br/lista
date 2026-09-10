@@ -39,8 +39,13 @@ Nome e marca de produto não são contador: aí vence a escrita mais recente (`a
 | POST | `/v1/sync` | envia eventos e produtos |
 | GET | `/v1/sync?desde=<seq>` | busca o que é novo |
 | GET | `/v1/sync/instantaneo` | estado completo, para quem acabou de entrar |
-| GET | `/v1/stream` | avisos em tempo real (SSE) |
+| GET | `/v1/stream` | avisos em tempo real (SSE), só enquanto o app está aberto |
+| PUT | `/v1/notificacoes/token` | guarda o token do FCM do aparelho, para o push |
 | GET | `/saude` | healthcheck |
+
+## Notificação push
+
+Opcional (ver [docs/06-notificacao-push.md](../docs/06-notificacao-push.md)): com `FIREBASE_SERVICE_ACCOUNT_JSON` configurado no `.env`, todo `POST /v1/sync` que aceita algum evento novo avisa por push os outros aparelhos da casa — o SSE só alcança quem está com o app aberto, e o push chega mesmo com o app fechado. Sem essa variável, `criarNotificador` devolve um no-op e nada muda no resto do fluxo.
 
 ## Desenvolvimento
 

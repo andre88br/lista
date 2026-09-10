@@ -2,20 +2,27 @@ import express from 'express';
 import { autenticar, exigirCasa } from './auth.js';
 import { criarAvisador } from './stream.js';
 import { criarVerificadorGoogle } from './google.js';
+import { criarNotificador } from './push.js';
 import { rotasDeAuth } from './rotas/auth.js';
 import { rotasDeCasas } from './rotas/casas.js';
 import { rotasDeSync } from './rotas/sync.js';
+import { rotasDeNotificacoes } from './rotas/notificacoes.js';
 import { paginaDePrivacidade } from './privacidade.js';
 import { ErroDeEntrada } from './validacao.js';
 
 /**
  * @param opcoes.verificarGoogle troca a checagem do token do Google. So os
  *        testes usam: em producao vale a verificacao real contra o Google.
+ * @param opcoes.notificador troca o envio de push. So os testes usam: em
+ *        producao vale o envio real pelo Firebase (ou o no-op, sem credencial).
+ * @param opcoes.maximoLoginPorHora troca o teto do limitador de login. So os
+ *        testes usam.
  */
 export function criarApp(pool, opcoes = {}) {
   const app = express();
   const avisador = criarAvisador();
   const verificarGoogle = opcoes.verificarGoogle ?? criarVerificadorGoogle(process.env.GOOGLE_CLIENT_ID);
+  const notificador = opcoes.notificador ?? criarNotificador(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
   // Atras do Caddy: sem isso, o limitador enxergaria todo mundo como o mesmo IP.
   app.set('trust proxy', 1);
@@ -54,7 +61,7 @@ export function criarApp(pool, opcoes = {}) {
 </html>`);
   });
 
-  app.use('/v1/auth', rotasDeAuth(pool, verificarGoogle));
+  app.use('/v1/auth', rotasDeAuth(pool, verificarGoogle, { maximoLoginPorHora: opcoes.maximoLoginPorHora }));
 
   // A ficha da loja precisa de um endereco publico de politica de privacidade,
   // e o proprio servidor e o lugar natural para hospedar.
@@ -65,7 +72,8 @@ export function criarApp(pool, opcoes = {}) {
   // Daqui para baixo, tudo exige o token do aparelho.
   app.use('/v1', autenticar(pool));
   app.use('/v1/casas', rotasDeCasas(pool));
-  app.use('/v1/sync', rotasDeSync(pool, avisador));
+  app.use('/v1/sync', rotasDeSync(pool, avisador, notificador));
+  app.use('/v1/notificacoes', rotasDeNotificacoes(pool));
 
   // Aviso em tempo real: o outro celular sincroniza assim que algo muda.
   app.get('/v1/stream', exigirCasa, (req, res) => {

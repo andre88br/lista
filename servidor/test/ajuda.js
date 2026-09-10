@@ -29,7 +29,21 @@ export function verificadorFalso() {
   };
 }
 
-export async function subirServidor() {
+/**
+ * Notificador falso: so registra pra quem seria enviado o push, sem nada de
+ * Firebase de verdade (que exigiria uma credencial real para testar).
+ */
+export function notificadorFalso() {
+  const chamadas = [];
+  return {
+    chamadas,
+    async enviarParaCasa(_pool, casaId, dispositivoRemetenteId) {
+      chamadas.push({ casaId, dispositivoRemetenteId });
+    },
+  };
+}
+
+export async function subirServidor(opcoes = {}) {
   const urlBase = process.env.DATABASE_URL || URL_PADRAO;
   const schema = `teste_${Math.random().toString(36).slice(2, 10)}`;
   const url = `${urlBase}${urlBase.includes('?') ? '&' : '?'}options=-c%20search_path%3D${schema}`;
@@ -41,7 +55,11 @@ export async function subirServidor() {
   const pool = criarPool(url);
   await migrar(pool);
 
-  const app = criarApp(pool, { verificarGoogle: verificadorFalso() });
+  const notificador = opcoes.notificador ?? notificadorFalso();
+  // Muitos cenarios independentes fazem login a partir do mesmo IP no mesmo
+  // processo de teste; o limitador de producao (30/hora) e sobre tentativas
+  // de um atacante, nao sobre quantos testes cabem num arquivo.
+  const app = criarApp(pool, { verificarGoogle: verificadorFalso(), notificador, maximoLoginPorHora: 10_000 });
   const servidor = app.listen(0);
   await new Promise((resolve) => servidor.once('listening', resolve));
   const base = `http://127.0.0.1:${servidor.address().port}`;
@@ -55,7 +73,7 @@ export async function subirServidor() {
   }
   after(encerrar);
 
-  return { base, pool, app, encerrar, chamar: criarChamador(base) };
+  return { base, pool, app, notificador, encerrar, chamar: criarChamador(base) };
 }
 
 function criarChamador(base) {

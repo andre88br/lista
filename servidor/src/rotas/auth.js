@@ -9,10 +9,14 @@ import { texto } from '../validacao.js';
  * Entrada pelo Google. E a unica porta de entrada: o app exige login na
  * primeira abertura, e a partir dai guarda o token do aparelho e funciona
  * offline.
+ *
+ * @param opcoes.maximoLoginPorHora troca o teto do limitador de tentativas.
+ *        So os testes usam, ja que ali muitos cenarios independentes fazem
+ *        login a partir do mesmo IP no mesmo processo.
  */
-export function rotasDeAuth(pool, verificarGoogle) {
+export function rotasDeAuth(pool, verificarGoogle, opcoes = {}) {
   const rotas = Router();
-  const limitePorIp = criarLimitador({ maximo: 30, janelaMs: 60 * 60 * 1000 });
+  const limitePorIp = criarLimitador({ maximo: opcoes.maximoLoginPorHora ?? 30, janelaMs: 60 * 60 * 1000 });
 
   rotas.post('/google', async (req, res) => {
     if (!limitePorIp(req.ip)) {

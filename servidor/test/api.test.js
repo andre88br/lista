@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entrarComGoogle, entrarComGoogleCompleto, evento, subirServidor } from './ajuda.js';
 
-const { base, chamar } = await subirServidor();
+const { base, chamar, notificador } = await subirServidor();
 
 test('saude responde sem token', async () => {
   const { status, corpo } = await chamar('GET', '/saude');
@@ -306,4 +306,52 @@ test('excluir a conta apaga a pessoa mas preserva o que a casa tem', async () =>
   const arroz = instantaneo.corpo.itens.find((i) => i.codigoBarras === 'arroz');
   assert.equal(arroz.lista, 1, 'o item pertence à casa, não a quem saiu');
   assert.equal(arroz.ultimoAutorNome, null, 'sem vínculo com a pessoa excluída');
+});
+
+test('registra o token do fcm do aparelho', async () => {
+  const token = await entrarComGoogle(chamar, 'pushuser|Usa Push');
+  const { status, corpo } = await chamar('PUT', '/v1/notificacoes/token', {
+    token,
+    corpo: { token: 'fcm-token-de-exemplo' },
+  });
+  assert.equal(status, 200);
+  assert.equal(corpo.ok, true);
+});
+
+test('token de fcm ausente da erro claro', async () => {
+  const token = await entrarComGoogle(chamar, 'pushuser2|Usa Push 2');
+  const { status } = await chamar('PUT', '/v1/notificacoes/token', { token, corpo: {} });
+  assert.equal(status, 400);
+});
+
+test('sincronizar avisa a casa por push, menos quem enviou', async () => {
+  const tokenA = await entrarComGoogle(chamar, 'pushA|Push A');
+  const tokenB = await entrarComGoogle(chamar, 'pushB|Push B');
+  const casa = await chamar('POST', '/v1/casas', { token: tokenA, corpo: { nome: 'Casa Push' } });
+  const entrouB = await chamar('POST', '/v1/casas/entrar', { token: tokenB, corpo: { codigo: casa.corpo.codigo } });
+
+  const antes = notificador.chamadas.length;
+  const envio = await chamar('POST', '/v1/sync', {
+    token: tokenA,
+    corpo: { eventos: [evento('cafe', { lista: 1 })] },
+  });
+  assert.equal(envio.status, 200);
+
+  assert.equal(notificador.chamadas.length, antes + 1, 'so avisa uma vez, para a casa toda');
+  const chamada = notificador.chamadas[antes];
+  assert.equal(chamada.casaId, entrouB.corpo.casaId);
+  // Quem escaneou nao precisa ser avisado de si mesmo: e o dispositivo remetente
+  // que o notificador vai excluir da lista de destinatarios.
+  assert.notEqual(chamada.dispositivoRemetenteId, undefined);
+});
+
+test('reenvio idempotente nao dispara push de novo', async () => {
+  const token = await entrarComGoogle(chamar, 'pushC|Push C');
+  await chamar('POST', '/v1/casas', { token, corpo: { nome: 'Casa Push 2' } });
+
+  const umEvento = evento('acucar', { lista: 1 });
+  await chamar('POST', '/v1/sync', { token, corpo: { eventos: [umEvento] } });
+  const antes = notificador.chamadas.length;
+  await chamar('POST', '/v1/sync', { token, corpo: { eventos: [umEvento] } });
+  assert.equal(notificador.chamadas.length, antes, 'reenviar o mesmo evento nao avisa de novo');
 });

@@ -36,7 +36,7 @@ function produtoParaJson(linha) {
   };
 }
 
-export function rotasDeSync(pool, avisador) {
+export function rotasDeSync(pool, avisador, notificador) {
   const rotas = Router();
   rotas.use(exigirCasa);
 
@@ -107,6 +107,13 @@ export function rotasDeSync(pool, avisador) {
 
     if (resultado.eventosAceitos > 0 || resultado.produtosRecebidos > 0) {
       avisador.avisar(casaId, { seq: resultado.seq });
+    }
+    // So quem escaneou de verdade precisa acordar o outro aparelho; reenvio
+    // idempotente (eventosAceitos = 0) nao muda nada pra ninguem.
+    if (resultado.eventosAceitos > 0) {
+      notificador.enviarParaCasa(pool, casaId, req.dispositivo.id).catch((erro) => {
+        console.error('[push] falha ao notificar a casa', erro.message);
+      });
     }
     res.json(resultado);
   });
