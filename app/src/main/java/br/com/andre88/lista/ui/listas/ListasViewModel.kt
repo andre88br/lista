@@ -8,16 +8,26 @@ import br.com.andre88.lista.data.sync.ResultadoSync
 import br.com.andre88.lista.data.sync.SyncRepositorio
 import br.com.andre88.lista.data.db.ItemComProduto
 import br.com.andre88.lista.domain.Modo
+import br.com.andre88.lista.domain.NormalizadorDeNome
+import br.com.andre88.lista.domain.OrdemDeCorredores
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Contadores mostrados na tela inicial e na barra de navegacao. */
 data class Totais(val lista: Int = 0, val estoque: Int = 0, val carrinho: Int = 0)
+
+/** Um grupo de itens da lista de compras que ficam na mesma secao do mercado. */
+data class GrupoDeItens(val corredor: String, val itens: List<ItemComProduto>)
+
+private fun agruparPorCorredor(itens: List<ItemComProduto>): List<GrupoDeItens> =
+    OrdemDeCorredores.agrupar(itens) { NormalizadorDeNome.corredorDe(it.nome, it.marca) }
+        .map { (corredor, itensDoCorredor) -> GrupoDeItens(corredor, itensDoCorredor) }
 
 class ListasViewModel(
     private val repositorio: ListaRepository,
@@ -37,6 +47,11 @@ class ListasViewModel(
     val mensagem: StateFlow<String?> = _mensagem.asStateFlow()
 
     val listaDeCompras: StateFlow<List<ItemComProduto>> = repositorio.listaDeCompras
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** A lista de compras agrupada por secao do mercado, para andar menos entre corredores. */
+    val listaDeComprasAgrupada: StateFlow<List<GrupoDeItens>> = listaDeCompras
+        .map(::agruparPorCorredor)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val carrinho: StateFlow<List<ItemComProduto>> = repositorio.carrinho
@@ -127,17 +142,21 @@ class ListasViewModel(
         }
     }
 
-    /** Texto da lista para compartilhar no WhatsApp. */
+    /** Texto da lista para compartilhar no WhatsApp, agrupado por corredor. */
     fun textoDaLista(): String {
-        val itens = listaDeCompras.value
-        if (itens.isEmpty()) return "Lista de compras vazia"
+        val grupos = listaDeComprasAgrupada.value
+        if (grupos.isEmpty()) return "Lista de compras vazia"
         return buildString {
             appendLine("Lista de compras:")
-            itens.forEach { item ->
-                append("- ")
-                append(item.nome)
-                if (item.qtdLista > 1) append(" (${item.qtdLista})")
+            grupos.forEach { grupo ->
                 appendLine()
+                appendLine("${grupo.corredor}:")
+                grupo.itens.forEach { item ->
+                    append("- ")
+                    append(item.nome)
+                    if (item.qtdLista > 1) append(" (${item.qtdLista})")
+                    appendLine()
+                }
             }
         }.trim()
     }

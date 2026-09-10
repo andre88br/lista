@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.item
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -17,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -42,7 +44,7 @@ fun ListaComprasScreen(
     viewModel: ListasViewModel,
     aoEscanear: () -> Unit,
 ) {
-    val itens by viewModel.listaDeCompras.collectAsStateWithLifecycle()
+    val grupos by viewModel.listaDeComprasAgrupada.collectAsStateWithLifecycle()
     val mensagem by viewModel.mensagem.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
@@ -86,7 +88,7 @@ fun ListaComprasScreen(
             )
         },
     ) { padding ->
-        if (itens.isEmpty()) {
+        if (grupos.isEmpty()) {
             ListaVazia(
                 titulo = "Nada para comprar",
                 descricao = "Quando um produto acabar, escaneie no modo \"Acabou\" que ele aparece aqui.",
@@ -101,18 +103,28 @@ fun ListaComprasScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(itens, key = { it.codigoBarras }) { item ->
-                    LinhaItem(
-                        item = item,
-                        quantidade = item.qtdLista,
-                        aoSomar = { viewModel.ajustar(item, Campo.LISTA, 1) },
-                        aoSubtrair = { viewModel.ajustar(item, Campo.LISTA, -1) },
-                        acao = {
-                            IconButton(onClick = { viewModel.marcarComprado(item) }) {
-                                Icon(Icons.Filled.CheckCircle, contentDescription = "Marcar como comprado")
-                            }
-                        },
-                    )
+                grupos.forEach { grupo ->
+                    item(key = "corredor:${grupo.corredor}") {
+                        Text(
+                            text = grupo.corredor,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                        )
+                    }
+                    items(grupo.itens, key = { it.codigoBarras }) { item ->
+                        LinhaItem(
+                            item = item,
+                            quantidade = item.qtdLista,
+                            aoSomar = { viewModel.ajustar(item, Campo.LISTA, 1) },
+                            aoSubtrair = { viewModel.ajustar(item, Campo.LISTA, -1) },
+                            acao = {
+                                IconButton(onClick = { viewModel.marcarComprado(item) }) {
+                                    Icon(Icons.Filled.CheckCircle, contentDescription = "Marcar como comprado")
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }

@@ -7,7 +7,8 @@ import java.text.Normalizer
  * tipo e peso num campo so) ao essencial para uma lista de compras: a categoria
  * (ex.: "Café") e, so quando existe, a caracteristica que de fato muda o que vai na
  * sacola (ex.: "moído" x "solúvel" x "em cápsulas"). Marca, peso e palavras de
- * marketing somem.
+ * marketing somem. A mesma tabela de categorias tambem diz em que secao do mercado
+ * o produto costuma estar (ver [corredorDe]), usado para agrupar a lista de compras.
  *
  * Cobre as categorias mais comuns de mercado. Um produto fora da lista so tem a
  * marca e o peso removidos, sem forcar numa categoria errada — e a lista e so um
@@ -19,16 +20,10 @@ object NormalizadorDeNome {
         val bruto = nomeBruto.trim()
         if (bruto.isEmpty()) return bruto
 
-        // A categoria e a caracteristica sao buscadas no nome inteiro, nao so no que
-        // sobra depois de tirar a marca. E quando nem isso acha (o tipo pode vir
-        // embutido so na marca, tipo "Nescafé"), tenta a marca por conter a palavra,
-        // sem exigir que ela seja uma palavra inteira ali dentro.
-        val buscaCompleta = semAcento(bruto)
-        val buscaMarca = marca?.let(::semAcento)
-        val categoria = CATEGORIAS.firstOrNull { cat -> cat.sinonimos.any { contemPalavra(buscaCompleta, it) } }
-            ?: buscaMarca?.let { texto -> CATEGORIAS.firstOrNull { cat -> cat.sinonimos.any { texto.contains(it) } } }
+        val categoria = categoriaDe(bruto, marca)
             ?: return capitalizar(removerRuido(bruto, marca).ifBlank { bruto })
 
+        val buscaCompleta = semAcento(bruto)
         val caracteristicas = categoria.caracteristicas
             .filter { c -> c.padroes.any { contemPalavra(buscaCompleta, it) } }
             .take(2)
@@ -38,6 +33,20 @@ object NormalizadorDeNome {
         } else {
             categoria.nomeCanonico + " " + caracteristicas.joinToString(" ") { it.rotulo }
         }
+    }
+
+    /** Secao do mercado do produto (Laticínios, Padaria...), para agrupar a lista de compras. */
+    fun corredorDe(nome: String, marca: String? = null): String = categoriaDe(nome, marca)?.corredor ?: "Outros"
+
+    private fun categoriaDe(nomeBruto: String, marca: String?): Categoria? {
+        // A categoria e buscada no nome inteiro, nao so no que sobra depois de tirar a
+        // marca. E quando nem isso acha (o tipo pode vir embutido so na marca, tipo
+        // "Nescafé"), tenta a marca por conter a palavra, sem exigir que seja uma
+        // palavra inteira ali dentro.
+        val buscaCompleta = semAcento(nomeBruto)
+        val buscaMarca = marca?.let(::semAcento)
+        return CATEGORIAS.firstOrNull { cat -> cat.sinonimos.any { contemPalavra(buscaCompleta, it) } }
+            ?: buscaMarca?.let { texto -> CATEGORIAS.firstOrNull { cat -> cat.sinonimos.any { texto.contains(it) } } }
     }
 
     /** Usado so quando nenhuma categoria e reconhecida: tira marca, peso e pontuacao solta. */
@@ -73,13 +82,14 @@ object NormalizadorDeNome {
 
     private data class Categoria(
         val nomeCanonico: String,
+        val corredor: String,
         val sinonimos: List<String>,
         val caracteristicas: List<Caracteristica> = emptyList(),
     )
 
     private val CATEGORIAS = listOf(
         Categoria(
-            "Café", listOf("cafe"),
+            "Café", "Mercearia", listOf("cafe"),
             listOf(
                 Caracteristica("em cápsulas", listOf("capsulas", "capsula")),
                 Caracteristica("solúvel", "soluvel"),
@@ -89,7 +99,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Leite", listOf("leite", "leites"),
+            "Leite", "Laticínios", listOf("leite", "leites"),
             listOf(
                 Caracteristica("em pó", "em po"),
                 Caracteristica("condensado", "condensado"),
@@ -101,7 +111,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Açúcar", listOf("acucar", "acucares"),
+            "Açúcar", "Mercearia", listOf("acucar", "acucares"),
             listOf(
                 Caracteristica("refinado", "refinado"),
                 Caracteristica("cristal", "cristal"),
@@ -110,7 +120,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Arroz", listOf("arroz"),
+            "Arroz", "Mercearia", listOf("arroz"),
             listOf(
                 Caracteristica("integral", "integral"),
                 Caracteristica("parboilizado", "parboilizado"),
@@ -118,7 +128,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Feijão", listOf("feijao", "feijoes"),
+            "Feijão", "Mercearia", listOf("feijao", "feijoes"),
             listOf(
                 Caracteristica("carioca", "carioca"),
                 Caracteristica("preto", "preto"),
@@ -127,7 +137,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Macarrão", listOf("macarrao", "massa", "massas"),
+            "Macarrão", "Mercearia", listOf("macarrao", "massa", "massas"),
             listOf(
                 Caracteristica("integral", "integral"),
                 Caracteristica("espaguete", "espaguete"),
@@ -136,11 +146,11 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Azeite", listOf("azeite"),
+            "Azeite", "Mercearia", listOf("azeite"),
             listOf(Caracteristica("extra virgem", "extra virgem")),
         ),
         Categoria(
-            "Óleo", listOf("oleo", "oleos"),
+            "Óleo", "Mercearia", listOf("oleo", "oleos"),
             listOf(
                 Caracteristica("de soja", "soja"),
                 Caracteristica("de girassol", "girassol"),
@@ -149,7 +159,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Biscoito", listOf("biscoito", "biscoitos", "bolacha", "bolachas"),
+            "Biscoito", "Mercearia", listOf("biscoito", "biscoitos", "bolacha", "bolachas"),
             listOf(
                 Caracteristica("recheado", "recheado"),
                 Caracteristica("água e sal", "agua e sal"),
@@ -160,7 +170,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Iogurte", listOf("iogurte", "iogurtes"),
+            "Iogurte", "Laticínios", listOf("iogurte", "iogurtes"),
             listOf(
                 Caracteristica("natural", "natural"),
                 Caracteristica("grego", "grego"),
@@ -171,7 +181,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Queijo", listOf("queijo", "queijos"),
+            "Queijo", "Laticínios", listOf("queijo", "queijos"),
             listOf(
                 Caracteristica("mussarela", "mussarela"),
                 Caracteristica("prato", "prato"),
@@ -181,14 +191,14 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Manteiga", listOf("manteiga"),
+            "Manteiga", "Laticínios", listOf("manteiga"),
             listOf(
                 Caracteristica("com sal", "com sal"),
                 Caracteristica("sem sal", "sem sal"),
             ),
         ),
         Categoria(
-            "Margarina", listOf("margarina"),
+            "Margarina", "Laticínios", listOf("margarina"),
             listOf(
                 Caracteristica("com sal", "com sal"),
                 Caracteristica("sem sal", "sem sal"),
@@ -196,7 +206,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Farinha", listOf("farinha"),
+            "Farinha", "Mercearia", listOf("farinha"),
             listOf(
                 Caracteristica("de trigo", "de trigo"),
                 Caracteristica("de mandioca", "de mandioca"),
@@ -205,7 +215,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Pão", listOf("pao", "paes"),
+            "Pão", "Padaria", listOf("pao", "paes"),
             listOf(
                 Caracteristica("de forma", "de forma"),
                 Caracteristica("francês", "frances"),
@@ -214,14 +224,14 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Água", listOf("agua", "aguas"),
+            "Água", "Bebidas", listOf("agua", "aguas"),
             listOf(
                 Caracteristica("com gás", "com gas"),
                 Caracteristica("sem gás", "sem gas"),
             ),
         ),
         Categoria(
-            "Refrigerante", listOf("refrigerante", "refrigerantes"),
+            "Refrigerante", "Bebidas", listOf("refrigerante", "refrigerantes"),
             listOf(
                 Caracteristica("zero", "zero"),
                 Caracteristica("diet", "diet"),
@@ -229,7 +239,7 @@ object NormalizadorDeNome {
             ),
         ),
         Categoria(
-            "Papel higiênico", listOf("papel higienico"),
+            "Papel higiênico", "Higiene e limpeza", listOf("papel higienico"),
             listOf(
                 Caracteristica("folha dupla", "folha dupla"),
                 Caracteristica("folha simples", "folha simples"),

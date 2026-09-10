@@ -102,4 +102,33 @@ class NormalizadorDeNomeTest {
         assertEquals("", NormalizadorDeNome.normalizar("", "Marca"))
         assertEquals("   ".trim(), NormalizadorDeNome.normalizar("   ", null))
     }
+
+    // ----------------------------------------------------------------- corredorDe
+
+    @Test
+    fun `corredor de laticinios`() {
+        assertEquals("Laticínios", NormalizadorDeNome.corredorDe("Leite integral"))
+        assertEquals("Laticínios", NormalizadorDeNome.corredorDe("Queijo mussarela"))
+        assertEquals("Laticínios", NormalizadorDeNome.corredorDe("Iogurte natural"))
+    }
+
+    @Test
+    fun `corredor de mercearia`() {
+        assertEquals("Mercearia", NormalizadorDeNome.corredorDe("Café moído"))
+        assertEquals("Mercearia", NormalizadorDeNome.corredorDe("Arroz integral"))
+        assertEquals("Mercearia", NormalizadorDeNome.corredorDe("Feijão carioca"))
+    }
+
+    @Test
+    fun `corredor de padaria e bebidas`() {
+        assertEquals("Padaria", NormalizadorDeNome.corredorDe("Pão de forma"))
+        assertEquals("Bebidas", NormalizadorDeNome.corredorDe("Água com gás"))
+        assertEquals("Bebidas", NormalizadorDeNome.corredorDe("Refrigerante zero"))
+    }
+
+    @Test
+    fun `corredor desconhecido cai em Outros`() {
+        assertEquals("Outros", NormalizadorDeNome.corredorDe("Salgadinho de Milho Sabor Churrasco"))
+        assertEquals("Outros", NormalizadorDeNome.corredorDe("banana"))
+    }
 }
