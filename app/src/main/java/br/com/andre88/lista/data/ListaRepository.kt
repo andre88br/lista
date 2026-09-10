@@ -12,6 +12,7 @@ import br.com.andre88.lista.domain.Campo
 import br.com.andre88.lista.domain.Deltas
 import br.com.andre88.lista.domain.ItemQtds
 import br.com.andre88.lista.domain.Modo
+import br.com.andre88.lista.domain.NormalizadorDeNome
 import br.com.andre88.lista.domain.ScanResultado
 import br.com.andre88.lista.domain.ScanTransitions
 import kotlinx.coroutines.flow.Flow
@@ -159,7 +160,8 @@ class ListaRepository(
     /** Sugestao de nome para um codigo desconhecido. Devolve null se estiver offline ou desligado. */
     suspend fun sugerirProduto(codigoBarras: String): SugestaoProduto? {
         if (!preferencias.consultarOpenFoodFacts.value) return null
-        return openFoodFacts.buscar(codigoBarras)
+        val sugestao = openFoodFacts.buscar(codigoBarras) ?: return null
+        return sugestao.copy(nome = NormalizadorDeNome.normalizar(sugestao.nome, sugestao.marca))
     }
 
     // ------------------------------------------------------------- sincronizacao
