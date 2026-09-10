@@ -2,6 +2,7 @@ package br.com.andre88.lista.data
 
 import androidx.room.withTransaction
 import br.com.andre88.lista.data.db.AppDatabase
+import br.com.andre88.lista.data.db.CompraRegistrada
 import br.com.andre88.lista.data.db.ItemComProduto
 import br.com.andre88.lista.data.db.ItemEntity
 import br.com.andre88.lista.data.db.ProdutoEntity
@@ -52,6 +53,7 @@ class ListaRepository(
     val totalEstoque: Flow<Int> = itemDao.totalEstoque()
     val totalCarrinho: Flow<Int> = itemDao.totalCarrinho()
     val eventosPendentes: Flow<Int> = eventoDao.quantidadePendente()
+    val historicoDeCompras: Flow<List<CompraRegistrada>> = eventoDao.historicoDeCompras()
 
     suspend fun produto(codigoBarras: String): ProdutoEntity? = produtoDao.porCodigo(codigoBarras)
 

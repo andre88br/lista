@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.RemoveShoppingCart
 import androidx.compose.material.icons.filled.Settings
@@ -39,7 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.andre88.lista.domain.Modo
 import br.com.andre88.lista.ui.listas.ListasViewModel
+import br.com.andre88.lista.ui.listas.SugestaoDeRecompra
 import br.com.andre88.lista.ui.tema.CoresModo
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +52,7 @@ fun HomeScreen(
     aoAbrirAjustes: () -> Unit,
 ) {
     val totais by viewModel.totais.collectAsStateWithLifecycle()
+    val sugestoes by viewModel.sugestoesDeRecompra.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -80,6 +84,10 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            if (sugestoes.isNotEmpty()) {
+                CartaoSugestoes(sugestoes = sugestoes, aoAceitar = viewModel::aceitarSugestaoDeRecompra)
+            }
+
             Spacer(Modifier.size(4.dp))
 
             CartaoModo(
@@ -108,6 +116,38 @@ fun HomeScreen(
                 cor = CoresModo.acabou,
                 aoClicar = { aoEscolherModo(Modo.ACABOU) },
             )
+        }
+    }
+}
+
+@Composable
+private fun CartaoSugestoes(sugestoes: List<SugestaoDeRecompra>, aoAceitar: (SugestaoDeRecompra) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = "Pelo seu histórico, hora de comprar de novo",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            sugestoes.forEach { sugestao ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(sugestao.nome, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = "Costuma acabar a cada ${sugestao.ritmo.intervaloMedioDias.roundToInt()} dia(s) — " +
+                                "já fazem ${sugestao.ritmo.diasDesdeUltimaCompra.roundToInt()} dia(s)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { aoAceitar(sugestao) }) {
+                        Icon(Icons.Filled.AddShoppingCart, contentDescription = "Adicionar à lista de compras")
+                    }
+                }
+            }
         }
     }
 }

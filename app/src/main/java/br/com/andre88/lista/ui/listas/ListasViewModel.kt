@@ -7,9 +7,11 @@ import br.com.andre88.lista.data.ListaRepository
 import br.com.andre88.lista.data.sync.ResultadoSync
 import br.com.andre88.lista.data.sync.SyncRepositorio
 import br.com.andre88.lista.data.db.ItemComProduto
+import br.com.andre88.lista.domain.CalculadoraDeRitmo
 import br.com.andre88.lista.domain.Modo
 import br.com.andre88.lista.domain.NormalizadorDeNome
 import br.com.andre88.lista.domain.OrdemDeCorredores
+import br.com.andre88.lista.domain.RitmoDeRecompra
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +30,9 @@ data class GrupoDeItens(val corredor: String, val itens: List<ItemComProduto>)
 private fun agruparPorCorredor(itens: List<ItemComProduto>): List<GrupoDeItens> =
     OrdemDeCorredores.agrupar(itens) { NormalizadorDeNome.corredorDe(it.nome, it.marca) }
         .map { (corredor, itensDoCorredor) -> GrupoDeItens(corredor, itensDoCorredor) }
+
+/** Um produto que, pelo historico de compras, provavelmente esta na hora de comprar de novo. */
+data class SugestaoDeRecompra(val codigoBarras: String, val nome: String, val ritmo: RitmoDeRecompra)
 
 class ListasViewModel(
     private val repositorio: ListaRepository,
@@ -72,6 +77,38 @@ class ListasViewModel(
         repositorio.totalCarrinho,
     ) { lista, estoque, carrinho -> Totais(lista, estoque, carrinho) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Totais())
+
+    /**
+     * Produtos que, pelo ritmo das compras anteriores, provavelmente estao na hora
+     * de comprar de novo — e que ainda nao estao na lista, no estoque ou no carrinho.
+     */
+    val sugestoesDeRecompra: StateFlow<List<SugestaoDeRecompra>> = combine(
+        repositorio.historicoDeCompras,
+        listaDeCompras,
+        repositorio.estoque,
+        repositorio.carrinho,
+    ) { historico, naLista, noEstoque, noCarrinho ->
+        val jaCobertos = buildSet {
+            naLista.forEach { add(it.codigoBarras) }
+            noEstoque.forEach { add(it.codigoBarras) }
+            noCarrinho.forEach { add(it.codigoBarras) }
+        }
+        historico.groupBy { it.codigoBarras }
+            .mapNotNull { (codigo, compras) ->
+                if (codigo in jaCobertos) return@mapNotNull null
+                val ritmo = CalculadoraDeRitmo.calcular(compras.map { it.timestamp }) ?: return@mapNotNull null
+                if (!ritmo.horaDeComprar) return@mapNotNull null
+                SugestaoDeRecompra(codigo, compras.first().nome, ritmo)
+            }
+            .sortedByDescending { it.ritmo.diasDesdeUltimaCompra - it.ritmo.intervaloMedioDias }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Aceita a sugestao e manda o produto para a lista de compras, como um "acabou". */
+    fun aceitarSugestaoDeRecompra(sugestao: SugestaoDeRecompra) = viewModelScope.launch {
+        repositorio.registrarLeitura(sugestao.codigoBarras, Modo.ACABOU)
+        sync.solicitarEnvio()
+        _mensagem.value = "${sugestao.nome} entrou na lista de compras"
+    }
 
     fun buscar(texto: String) { _busca.value = texto }
 

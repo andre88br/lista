@@ -129,4 +129,18 @@ interface ScanEventoDao {
 
     @Query("DELETE FROM scan_evento")
     suspend fun apagarTudo()
+
+    /** Data de cada compra (leitura no modo mercado, sem contar as desfeitas), para o ritmo de recompra. */
+    @Query(
+        """
+        SELECT e.codigoBarras AS codigoBarras, p.nome AS nome, e.timestamp AS timestamp
+        FROM scan_evento e INNER JOIN produto p ON p.codigoBarras = e.codigoBarras
+        WHERE e.modo = 'MERCADO' AND e.desfeito = 0
+        ORDER BY e.codigoBarras, e.timestamp
+        """,
+    )
+    fun historicoDeCompras(): Flow<List<CompraRegistrada>>
 }
+
+/** Uma compra registrada (leitura no modo mercado), para calcular o ritmo de recompra. */
+data class CompraRegistrada(val codigoBarras: String, val nome: String, val timestamp: Long)
