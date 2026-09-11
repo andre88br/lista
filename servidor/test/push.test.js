@@ -8,6 +8,15 @@ test('sem credencial, o notificador nao faz nada e nao quebra', async () => {
   await assert.doesNotReject(notificador.enviarParaCasa(null, 'qualquer-casa', 'qualquer-dispositivo'));
 });
 
-test('credencial invalida da erro claro, em vez de falhar mais tarde', () => {
-  assert.throws(() => criarNotificador('isto nao e json'), /JSON valido/);
+test('credencial invalida so desliga o push, nao derruba o servidor', async () => {
+  // Um FIREBASE_SERVICE_ACCOUNT_JSON quebrado (colado pela metade, por
+  // exemplo) nao pode tirar do ar um servidor inteiro por causa de um
+  // recurso opcional: cai no mesmo no-op de "sem credencial".
+  const notificador = criarNotificador('isto nao e json');
+  await assert.doesNotReject(notificador.enviarParaCasa(null, 'qualquer-casa', 'qualquer-dispositivo'));
+});
+
+test('json valido mas sem os campos de credencial tambem so desliga o push', async () => {
+  const notificador = criarNotificador(JSON.stringify({ nao: 'e uma credencial de servico' }));
+  await assert.doesNotReject(notificador.enviarParaCasa(null, 'qualquer-casa', 'qualquer-dispositivo'));
 });

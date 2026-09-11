@@ -5,6 +5,8 @@ const CODIGOS_TOKEN_MORTO = new Set([
   'messaging/invalid-registration-token',
 ]);
 
+const SEM_PUSH = { enviarParaCasa: async () => {} };
+
 /**
  * Avisa por push os outros aparelhos da casa quando algo muda, para sincronizar
  * mesmo com o app fechado (o SSE so alcanca quem esta com o app aberto).
@@ -15,21 +17,21 @@ const CODIGOS_TOKEN_MORTO = new Set([
  */
 export function criarNotificador(credencialJson) {
   if (!credencialJson) {
-    return { enviarParaCasa: async () => {} };
+    return SEM_PUSH;
   }
 
-  let credencial;
+  // Uma credencial quebrada (JSON invalido, colado pela metade, chave errada)
+  // nunca pode derrubar o servidor inteiro so por causa de um recurso
+  // opcional: melhor desligar a notificacao e seguir com o resto no ar.
+  let mensageria;
   try {
-    credencial = JSON.parse(credencialJson);
-  } catch {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON nao e um JSON valido');
+    const credencial = JSON.parse(credencialJson);
+    const app = admin.initializeApp({ credential: admin.credential.cert(credencial) }, 'lista-push');
+    mensageria = app.messaging();
+  } catch (erro) {
+    console.error('[push] FIREBASE_SERVICE_ACCOUNT_JSON invalido; notificacao push desligada:', erro.message);
+    return SEM_PUSH;
   }
-
-  const app = admin.initializeApp(
-    { credential: admin.credential.cert(credencial) },
-    'lista-push',
-  );
-  const mensageria = app.messaging();
 
   /** Manda um "tem novidade" para todo aparelho da casa, menos quem enviou. */
   async function enviarParaCasa(pool, casaId, dispositivoRemetenteId) {
