@@ -1,4 +1,5 @@
-import admin from 'firebase-admin';
+import { cert, initializeApp } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 
 const CODIGOS_TOKEN_MORTO = new Set([
   'messaging/registration-token-not-registered',
@@ -26,8 +27,10 @@ export function criarNotificador(credencialJson) {
   let mensageria;
   try {
     const credencial = JSON.parse(credencialJson);
-    const app = admin.initializeApp({ credential: admin.credential.cert(credencial) }, 'lista-push');
-    mensageria = app.messaging();
+    // firebase-admin 12+ so tem a API modular: admin.credential e
+    // app.messaging() nao existem mais (davam TypeError e derrubavam o boot).
+    const app = initializeApp({ credential: cert(credencial) }, 'lista-push');
+    mensageria = getMessaging(app);
   } catch (erro) {
     console.error('[push] FIREBASE_SERVICE_ACCOUNT_JSON invalido; notificacao push desligada:', erro.message);
     return SEM_PUSH;
